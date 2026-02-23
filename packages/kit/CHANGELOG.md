@@ -1,5 +1,11 @@
 # @satoshai/kit
 
+## 0.1.1
+
+### Patch Changes
+
+- Add package README with full API documentation
+
 ## 0.1.0
 
 ### Minor Changes
