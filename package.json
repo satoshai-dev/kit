@@ -2,6 +2,7 @@
   "name": "kit-monorepo",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@10.18.3",
   "scripts": {
     "build": "pnpm --filter @satoshai/kit build",
     "test": "pnpm --filter @satoshai/kit test",
