@@ -4,8 +4,17 @@ import {
     useConnect,
     useDisconnect,
     useBnsName,
+    getStacksWallets,
     SUPPORTED_STACKS_WALLETS,
+    type SupportedStacksWallet,
 } from '@satoshai/kit';
+
+const hasWalletConnectConfig = false;
+
+const isWalletAvailable = (wallet: SupportedStacksWallet) => {
+    if (wallet === 'wallet-connect') return hasWalletConnectConfig;
+    return getStacksWallets().installed.includes(wallet);
+};
 
 export const App = () => {
     return (
@@ -48,15 +57,18 @@ const Wallet = () => {
             <h2>Connect a Wallet</h2>
             {isPending && <p>Connecting...</p>}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxWidth: '300px' }}>
-                {SUPPORTED_STACKS_WALLETS.map((wallet) => (
-                    <button
-                        key={wallet}
-                        onClick={() => connect(wallet)}
-                        disabled={isPending}
-                    >
-                        {wallet}
-                    </button>
-                ))}
+                {SUPPORTED_STACKS_WALLETS.map((wallet) => {
+                    const available = isWalletAvailable(wallet);
+                    return (
+                        <button
+                            key={wallet}
+                            onClick={() => connect(wallet)}
+                            disabled={isPending || !available}
+                        >
+                            {wallet}{!available ? ' (not available)' : ''}
+                        </button>
+                    );
+                })}
             </div>
         </div>
     );
