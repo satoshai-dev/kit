@@ -20,7 +20,10 @@ import { STACKS_TO_STACKS_CONNECT_PROVIDERS } from '../constants/stacks-provider
 import { LOCAL_STORAGE_STACKS } from '../constants/storage-keys';
 import type { SupportedStacksWallet } from '../constants/wallets';
 import { SUPPORTED_STACKS_WALLETS } from '../constants/wallets';
-import { checkIfStacksProviderIsInstalled } from '../utils/get-stacks-wallets';
+import {
+    checkIfStacksProviderIsInstalled,
+    getStacksWallets,
+} from '../utils/get-stacks-wallets';
 
 import {
     getOKXStacksAddress,
@@ -227,6 +230,12 @@ export const StacksWalletProvider = ({
         connect,
     });
 
+    const availableWallets = useMemo(() => {
+        const { installed } = getStacksWallets();
+        if (walletConnect?.projectId) return installed;
+        return installed.filter((w) => w !== 'wallet-connect');
+    }, [walletConnect?.projectId]);
+
     const value = useMemo((): WalletContextValue => {
         const walletState: WalletState = isConnecting
             ? { status: 'connecting', address: undefined, provider: undefined }
@@ -242,8 +251,9 @@ export const StacksWalletProvider = ({
             ...walletState,
             connect,
             disconnect,
+            availableWallets,
         };
-    }, [address, provider, isConnecting, connect, disconnect]);
+    }, [address, provider, isConnecting, connect, disconnect, availableWallets]);
 
     return (
         <StacksWalletContext.Provider value={value}>

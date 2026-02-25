@@ -49,4 +49,5 @@ export type WalletContextValue = WalletState & {
         options?: ConnectOptions
     ) => Promise<void>;
     disconnect: (callback?: () => void) => void;
+    availableWallets: SupportedStacksWallet[];
 };

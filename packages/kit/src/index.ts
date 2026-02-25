@@ -18,6 +18,7 @@ export {
     type PostConditionConfig,
 } from './hooks/use-write-contract/use-write-contract';
 export { useBnsName } from './hooks/use-bns-name';
+export { useAvailableWallets } from './hooks/use-available-wallets';
 
 // Types
 export type {
