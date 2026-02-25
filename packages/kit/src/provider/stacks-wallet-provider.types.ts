@@ -16,6 +16,7 @@ export interface ConnectOptions {
 
 export interface StacksWalletProviderProps {
     children: React.ReactNode;
+    wallets?: SupportedStacksWallet[];
     walletConnect?: {
         projectId: string;
         metadata?: Partial<WalletConnectMetadata>;
@@ -43,10 +44,17 @@ export type WalletState =
           provider: SupportedStacksWallet;
       };
 
+export interface WalletInfo {
+    id: SupportedStacksWallet;
+    available: boolean;
+}
+
 export type WalletContextValue = WalletState & {
     connect: (
         providerId: SupportedStacksWallet,
         options?: ConnectOptions
     ) => Promise<void>;
     disconnect: (callback?: () => void) => void;
+    reset: () => void;
+    wallets: WalletInfo[];
 };

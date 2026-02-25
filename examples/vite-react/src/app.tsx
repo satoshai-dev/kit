@@ -4,12 +4,16 @@ import {
     useConnect,
     useDisconnect,
     useBnsName,
-    SUPPORTED_STACKS_WALLETS,
+    useWallets,
 } from '@satoshai/kit';
+
+const wcProjectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID as string | undefined;
 
 export const App = () => {
     return (
-        <StacksWalletProvider>
+        <StacksWalletProvider
+            walletConnect={wcProjectId ? { projectId: wcProjectId } : undefined}
+        >
             <div style={{ fontFamily: 'system-ui', padding: '2rem' }}>
                 <h1>@satoshai/kit Example</h1>
                 <Wallet />
@@ -19,10 +23,11 @@ export const App = () => {
 };
 
 const Wallet = () => {
-    const { connect, isPending } = useConnect();
+    const { connect, reset, isPending } = useConnect();
     const { address, isConnected } = useAddress();
     const { disconnect } = useDisconnect();
     const { bnsName, isLoading: isBnsLoading } = useBnsName(address);
+    const { wallets } = useWallets();
 
     if (isConnected) {
         return (
@@ -46,15 +51,20 @@ const Wallet = () => {
     return (
         <div>
             <h2>Connect a Wallet</h2>
-            {isPending && <p>Connecting...</p>}
+            {isPending && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <p>Connecting...</p>
+                    <button onClick={reset}>Cancel</button>
+                </div>
+            )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxWidth: '300px' }}>
-                {SUPPORTED_STACKS_WALLETS.map((wallet) => (
+                {wallets.map(({ id, available }) => (
                     <button
-                        key={wallet}
-                        onClick={() => connect(wallet)}
-                        disabled={isPending}
+                        key={id}
+                        onClick={() => connect(id)}
+                        disabled={isPending || !available}
                     >
-                        {wallet}
+                        {id}{!available ? ' (not available)' : ''}
                     </button>
                 ))}
             </div>

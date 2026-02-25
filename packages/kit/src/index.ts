@@ -18,12 +18,14 @@ export {
     type PostConditionConfig,
 } from './hooks/use-write-contract/use-write-contract';
 export { useBnsName } from './hooks/use-bns-name';
+export { useWallets } from './hooks/use-wallets';
 
 // Types
 export type {
     WalletState,
     WalletContextValue,
     WalletConnectMetadata,
+    WalletInfo,
     StacksChain,
     ConnectOptions,
 } from './provider/stacks-wallet-provider.types';

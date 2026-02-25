@@ -32,7 +32,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@stacks/connect": "^8.2.2",
+    "@stacks/connect": "8.2.5",
     "bns-v2-sdk": "^2.1.0"
   },
   "peerDependencies": {

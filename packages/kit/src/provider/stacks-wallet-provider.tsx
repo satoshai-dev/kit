@@ -5,12 +5,14 @@ import {
     setSelectedProviderId,
     request,
     getSelectedProvider,
+    WalletConnect,
 } from '@stacks/connect';
 import {
     createContext,
     useContext,
     useCallback,
     useEffect,
+    useRef,
     useState,
     useMemo,
 } from 'react';
@@ -19,7 +21,10 @@ import { STACKS_TO_STACKS_CONNECT_PROVIDERS } from '../constants/stacks-provider
 import { LOCAL_STORAGE_STACKS } from '../constants/storage-keys';
 import type { SupportedStacksWallet } from '../constants/wallets';
 import { SUPPORTED_STACKS_WALLETS } from '../constants/wallets';
-import { checkIfStacksProviderIsInstalled } from '../utils/get-stacks-wallets';
+import {
+    checkIfStacksProviderIsInstalled,
+    getStacksWallets,
+} from '../utils/get-stacks-wallets';
 
 import {
     getOKXStacksAddress,
@@ -41,6 +46,7 @@ const StacksWalletContext = createContext<WalletContextValue | undefined>(
 
 export const StacksWalletProvider = ({
     children,
+    wallets,
     walletConnect,
     onConnect,
     onAddressChange,
@@ -51,6 +57,21 @@ export const StacksWalletProvider = ({
         SupportedStacksWallet | undefined
     >();
     const [isConnecting, setIsConnecting] = useState(false);
+
+    // Generation counter — incremented by reset() to invalidate in-flight connect promises
+    const connectGenRef = useRef(0);
+
+    // Guard against concurrent WalletConnect.initializeProvider calls
+    const wcInitRef = useRef<Promise<void> | null>(null);
+
+    // Fix #1: runtime guard in useEffect instead of render body
+    useEffect(() => {
+        if (wallets?.includes('wallet-connect') && !walletConnect?.projectId) {
+            throw new Error(
+                'StacksWalletProvider: "wallet-connect" is listed in wallets but no walletConnect.projectId was provided.'
+            );
+        }
+    }, [wallets, walletConnect?.projectId]);
 
     useEffect(() => {
         const loadPersistedWallet = async () => {
@@ -68,6 +89,22 @@ export const StacksWalletProvider = ({
                     return;
                 }
 
+                if (
+                    persisted.provider === 'wallet-connect' &&
+                    walletConnect?.projectId
+                ) {
+                    const initPromise = WalletConnect.initializeProvider(
+                        buildWalletConnectConfig(
+                            walletConnect.projectId,
+                            walletConnect.metadata,
+                            walletConnect.chains
+                        )
+                    );
+                    wcInitRef.current = initPromise;
+                    await initPromise;
+                    wcInitRef.current = null;
+                }
+
                 setAddress(persisted.address);
                 setProvider(persisted.provider);
                 setSelectedProviderId(
@@ -81,7 +118,7 @@ export const StacksWalletProvider = ({
         };
 
         void loadPersistedWallet();
-    }, []);
+    }, [walletConnect?.projectId]);
 
     const connect = useCallback(
         async (providerId: SupportedStacksWallet, options?: ConnectOptions) => {
@@ -119,11 +156,14 @@ export const StacksWalletProvider = ({
                 return;
             }
 
+            // Capture generation so we can detect if reset() was called during await
+            const gen = ++connectGenRef.current;
             setIsConnecting(true);
 
             try {
                 if (typedProvider === 'okx') {
                     const data = await getOKXStacksAddress();
+                    if (connectGenRef.current !== gen) return;
                     setAddress(data.address);
                     setProvider(data.provider);
                     options?.onSuccess?.(data.address, data.provider);
@@ -134,19 +174,36 @@ export const StacksWalletProvider = ({
                     STACKS_TO_STACKS_CONNECT_PROVIDERS[typedProvider]
                 );
 
-                const data = walletConnect
+                const wcConfig =
+                    typedProvider === 'wallet-connect' && walletConnect
+                        ? buildWalletConnectConfig(
+                              walletConnect.projectId,
+                              walletConnect.metadata,
+                              walletConnect.chains
+                          )
+                        : undefined;
+
+                if (wcConfig) {
+                    // Wait for any in-flight init, then start ours
+                    if (wcInitRef.current) await wcInitRef.current;
+                    const initPromise =
+                        WalletConnect.initializeProvider(wcConfig);
+                    wcInitRef.current = initPromise;
+                    await initPromise;
+                    wcInitRef.current = null;
+                }
+
+                if (connectGenRef.current !== gen) return;
+
+                const data = wcConfig
                     ? await request(
-                          {
-                              walletConnect: buildWalletConnectConfig(
-                                  walletConnect.projectId,
-                                  walletConnect.metadata,
-                                  walletConnect.chains
-                              ),
-                          },
+                          { walletConnect: wcConfig },
                           'getAddresses',
                           {}
                       )
                     : await request('getAddresses');
+
+                if (connectGenRef.current !== gen) return;
 
                 const extractedAddress = extractStacksAddress(
                     typedProvider,
@@ -157,16 +214,25 @@ export const StacksWalletProvider = ({
                 setProvider(typedProvider);
                 options?.onSuccess?.(extractedAddress, typedProvider);
             } catch (error) {
+                if (connectGenRef.current !== gen) return;
                 console.error('Failed to connect wallet:', error);
                 getSelectedProvider()?.disconnect?.();
                 clearSelectedProviderId();
                 options?.onError?.(error as Error);
             } finally {
-                setIsConnecting(false);
+                if (connectGenRef.current === gen) {
+                    setIsConnecting(false);
+                }
             }
         },
         [walletConnect]
     );
+
+    const reset = useCallback(() => {
+        connectGenRef.current++;
+        setIsConnecting(false);
+        clearSelectedProviderId();
+    }, []);
 
     const disconnect = useCallback(
         (callback?: () => void) => {
@@ -206,6 +272,19 @@ export const StacksWalletProvider = ({
         connect,
     });
 
+    const walletInfos = useMemo(() => {
+        const { installed } = getStacksWallets();
+        const configured = wallets ?? [...SUPPORTED_STACKS_WALLETS];
+
+        return configured.map((w) => ({
+            id: w,
+            available:
+                w === 'wallet-connect'
+                    ? !!walletConnect?.projectId
+                    : installed.includes(w),
+        }));
+    }, [wallets, walletConnect?.projectId]);
+
     const value = useMemo((): WalletContextValue => {
         const walletState: WalletState = isConnecting
             ? { status: 'connecting', address: undefined, provider: undefined }
@@ -221,8 +300,10 @@ export const StacksWalletProvider = ({
             ...walletState,
             connect,
             disconnect,
+            reset,
+            wallets: walletInfos,
         };
-    }, [address, provider, isConnecting, connect, disconnect]);
+    }, [address, provider, isConnecting, connect, disconnect, reset, walletInfos]);
 
     return (
         <StacksWalletContext.Provider value={value}>
