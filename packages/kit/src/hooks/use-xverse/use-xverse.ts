@@ -71,7 +71,7 @@ export const useXverse = ({
                     () => connect('xverse')
                 );
 
-                const unlisten = getSelectedProvider()?.addListener(
+                removeListener = getSelectedProvider()?.addListener(
                     'accountChange',
                     (event: XverseAccountChangeEvent) => {
                         extractAndValidateStacksAddress(
@@ -82,21 +82,6 @@ export const useXverse = ({
                         );
                     }
                 );
-
-                if (cancelled) {
-                    // Effect was cleaned up while we were awaiting —
-                    // remove the listener immediately to prevent a leak.
-                    try {
-                        unlisten?.();
-                    } catch (error) {
-                        console.error(
-                            'Failed to remove Xverse listener after cancel:',
-                            error
-                        );
-                    }
-                } else {
-                    removeListener = unlisten;
-                }
             } catch (error) {
                 console.error('Failed to setup Xverse:', error);
             }

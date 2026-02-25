@@ -2,4 +2,4 @@
 "@satoshai/kit": patch
 ---
 
-Fix potential useXverse listener leak when the effect cleanup races with the async addListener call.
+Add early-exit checks to useXverse async setup to skip unnecessary work when the effect is cleaned up during pending awaits.
