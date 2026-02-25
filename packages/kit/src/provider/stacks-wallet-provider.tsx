@@ -45,6 +45,7 @@ const StacksWalletContext = createContext<WalletContextValue | undefined>(
 
 export const StacksWalletProvider = ({
     children,
+    wallets,
     walletConnect,
     onConnect,
     onAddressChange,
@@ -232,9 +233,13 @@ export const StacksWalletProvider = ({
 
     const availableWallets = useMemo(() => {
         const { installed } = getStacksWallets();
-        if (walletConnect?.projectId) return installed;
-        return installed.filter((w) => w !== 'wallet-connect');
-    }, [walletConnect?.projectId]);
+        const configured = wallets ?? SUPPORTED_STACKS_WALLETS;
+
+        return [...configured].filter((w) => {
+            if (w === 'wallet-connect') return !!walletConnect?.projectId;
+            return installed.includes(w);
+        });
+    }, [wallets, walletConnect?.projectId]);
 
     const value = useMemo((): WalletContextValue => {
         const walletState: WalletState = isConnecting

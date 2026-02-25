@@ -16,6 +16,7 @@ export interface ConnectOptions {
 
 export interface StacksWalletProviderProps {
     children: React.ReactNode;
+    wallets?: SupportedStacksWallet[];
     walletConnect?: {
         projectId: string;
         metadata?: Partial<WalletConnectMetadata>;
