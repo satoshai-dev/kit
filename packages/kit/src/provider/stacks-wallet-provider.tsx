@@ -64,6 +64,11 @@ export const StacksWalletProvider = ({
     // Guard against concurrent WalletConnect.initializeProvider calls
     const wcInitRef = useRef<Promise<void> | null>(null);
 
+    // Serialize wallets to a stable string for use as a dependency,
+    // so inline arrays like wallets={['xverse', 'leather']} don't
+    // invalidate memos on every render. (Fixes #5)
+    const walletsKey = wallets?.join(',');
+
     // Fix #1: runtime guard in useEffect instead of render body
     useEffect(() => {
         if (wallets?.includes('wallet-connect') && !walletConnect?.projectId) {
@@ -71,7 +76,7 @@ export const StacksWalletProvider = ({
                 'StacksWalletProvider: "wallet-connect" is listed in wallets but no walletConnect.projectId was provided.'
             );
         }
-    }, [wallets, walletConnect?.projectId]);
+    }, [walletsKey, walletConnect?.projectId]);
 
     useEffect(() => {
         const loadPersistedWallet = async () => {
@@ -288,7 +293,7 @@ export const StacksWalletProvider = ({
                     ? !!walletConnect?.projectId
                     : installed.includes(w),
         }));
-    }, [wallets, walletConnect?.projectId]);
+    }, [walletsKey, walletConnect?.projectId]);
 
     const value = useMemo((): WalletContextValue => {
         const walletState: WalletState = isConnecting
