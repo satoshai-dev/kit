@@ -8,9 +8,13 @@ import {
     SUPPORTED_STACKS_WALLETS,
 } from '@satoshai/kit';
 
+const wcProjectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID as string | undefined;
+
 export const App = () => {
     return (
-        <StacksWalletProvider>
+        <StacksWalletProvider
+            walletConnect={wcProjectId ? { projectId: wcProjectId } : undefined}
+        >
             <div style={{ fontFamily: 'system-ui', padding: '2rem' }}>
                 <h1>@satoshai/kit Example</h1>
                 <Wallet />

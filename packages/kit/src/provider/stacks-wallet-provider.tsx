@@ -51,6 +51,12 @@ export const StacksWalletProvider = ({
     onAddressChange,
     onDisconnect,
 }: StacksWalletProviderProps) => {
+    if (wallets?.includes('wallet-connect') && !walletConnect?.projectId) {
+        throw new Error(
+            'StacksWalletProvider: "wallet-connect" is listed in wallets but no walletConnect.projectId was provided.'
+        );
+    }
+
     const [address, setAddress] = useState<string | undefined>();
     const [provider, setProvider] = useState<
         SupportedStacksWallet | undefined
