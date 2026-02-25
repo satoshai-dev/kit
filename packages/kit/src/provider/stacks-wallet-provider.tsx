@@ -199,6 +199,11 @@ export const StacksWalletProvider = ({
         [walletConnect]
     );
 
+    const reset = useCallback(() => {
+        setIsConnecting(false);
+        clearSelectedProviderId();
+    }, []);
+
     const disconnect = useCallback(
         (callback?: () => void) => {
             localStorage.removeItem(LOCAL_STORAGE_STACKS);
@@ -262,9 +267,10 @@ export const StacksWalletProvider = ({
             ...walletState,
             connect,
             disconnect,
+            reset,
             availableWallets,
         };
-    }, [address, provider, isConnecting, connect, disconnect, availableWallets]);
+    }, [address, provider, isConnecting, connect, disconnect, reset, availableWallets]);
 
     return (
         <StacksWalletContext.Provider value={value}>

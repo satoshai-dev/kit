@@ -24,7 +24,7 @@ export const App = () => {
 };
 
 const Wallet = () => {
-    const { connect, isPending } = useConnect();
+    const { connect, reset, isPending } = useConnect();
     const { address, isConnected } = useAddress();
     const { disconnect } = useDisconnect();
     const { bnsName, isLoading: isBnsLoading } = useBnsName(address);
@@ -52,7 +52,12 @@ const Wallet = () => {
     return (
         <div>
             <h2>Connect a Wallet</h2>
-            {isPending && <p>Connecting...</p>}
+            {isPending && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <p>Connecting...</p>
+                    <button onClick={reset}>Cancel</button>
+                </div>
+            )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxWidth: '300px' }}>
                 {SUPPORTED_STACKS_WALLETS.map((wallet) => {
                     const available = availableWallets.includes(wallet);
