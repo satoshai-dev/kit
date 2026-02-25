@@ -46,11 +46,14 @@ export const useXverse = ({
     useEffect(() => {
         if (provider !== 'xverse' || !address || !isProviderReady) return;
 
+        let cancelled = false;
         let removeListener: (() => void) | undefined;
 
         const setupXverse = async () => {
             try {
                 const productInfo = await getXverseProductInfo();
+
+                if (cancelled) return;
 
                 if (!shouldSupportAccountChange(productInfo?.version)) return;
 
@@ -59,6 +62,8 @@ export const useXverse = ({
                     null
                 );
 
+                if (cancelled) return;
+
                 extractAndValidateStacksAddress(
                     response?.result?.addresses,
                     address,
@@ -66,7 +71,7 @@ export const useXverse = ({
                     () => connect('xverse')
                 );
 
-                removeListener = getSelectedProvider()?.addListener(
+                const unlisten = getSelectedProvider()?.addListener(
                     'accountChange',
                     (event: XverseAccountChangeEvent) => {
                         extractAndValidateStacksAddress(
@@ -77,6 +82,21 @@ export const useXverse = ({
                         );
                     }
                 );
+
+                if (cancelled) {
+                    // Effect was cleaned up while we were awaiting —
+                    // remove the listener immediately to prevent a leak.
+                    try {
+                        unlisten?.();
+                    } catch (error) {
+                        console.error(
+                            'Failed to remove Xverse listener after cancel:',
+                            error
+                        );
+                    }
+                } else {
+                    removeListener = unlisten;
+                }
             } catch (error) {
                 console.error('Failed to setup Xverse:', error);
             }
@@ -85,6 +105,8 @@ export const useXverse = ({
         void setupXverse();
 
         return () => {
+            cancelled = true;
+
             if (!removeListener) return;
 
             try {
