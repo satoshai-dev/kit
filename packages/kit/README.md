@@ -81,6 +81,8 @@ Wrap your app to provide wallet context to all hooks.
 
 > If `wallets` includes `'wallet-connect'`, you must provide `walletConnect.projectId` or the provider will throw at mount.
 
+> **Important:** Define `wallets` and `walletConnect` outside of your component (or memoize them) so they remain referentially stable across renders. These values are treated as static configuration.
+
 ### `useConnect()`
 
 ```ts
