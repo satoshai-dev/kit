@@ -6,6 +6,7 @@ Typesafe Stacks wallet & contract interaction library for React. Wagmi-inspired 
 
 - **`StacksWalletProvider`** — React context provider for wallet state
 - **`useConnect` / `useDisconnect`** — Connect and disconnect wallets
+- **`useWallets`** — Configured wallets with availability status
 - **`useAddress`** — Access connected wallet address and status
 - **`useSignMessage`** — Sign arbitrary messages
 - **`useWriteContract`** — Call smart contracts with post-conditions
@@ -22,7 +23,7 @@ pnpm add @satoshai/kit @stacks/transactions react react-dom
 ## Quick Start
 
 ```tsx
-import { StacksWalletProvider, useConnect, useAddress, useDisconnect } from '@satoshai/kit';
+import { StacksWalletProvider, useConnect, useWallets, useAddress, useDisconnect } from '@satoshai/kit';
 
 function App() {
   return (
@@ -33,7 +34,8 @@ function App() {
 }
 
 function Wallet() {
-  const { connect, connectors } = useConnect();
+  const { connect, reset, isPending } = useConnect();
+  const { wallets } = useWallets();
   const { address, isConnected } = useAddress();
   const { disconnect } = useDisconnect();
 
@@ -48,9 +50,10 @@ function Wallet() {
 
   return (
     <div>
-      {connectors.map((wallet) => (
-        <button key={wallet} onClick={() => connect(wallet)}>
-          {wallet}
+      {isPending && <button onClick={reset}>Cancel</button>}
+      {wallets.map(({ id, available }) => (
+        <button key={id} onClick={() => connect(id)} disabled={!available || isPending}>
+          {id}
         </button>
       ))}
     </div>
@@ -66,27 +69,49 @@ Wrap your app to provide wallet context to all hooks.
 
 ```tsx
 <StacksWalletProvider
-  walletConnect={{ projectId: '...' }}  // optional — enables WalletConnect
-  onConnect={(provider, address) => {}}  // optional
-  onAddressChange={(newAddress) => {}}   // optional — Xverse account switching
-  onDisconnect={() => {}}                // optional
+  wallets={['xverse', 'leather', 'wallet-connect']}  // optional — defaults to all supported
+  walletConnect={{ projectId: '...' }}                 // optional — enables WalletConnect
+  onConnect={(provider, address) => {}}                // optional
+  onAddressChange={(newAddress) => {}}                 // optional — Xverse account switching
+  onDisconnect={() => {}}                              // optional
 >
   {children}
 </StacksWalletProvider>
 ```
 
+> If `wallets` includes `'wallet-connect'`, you must provide `walletConnect.projectId` or the provider will throw at mount.
+
 ### `useConnect()`
 
 ```ts
-const { connect, connectors, isPending } = useConnect();
+const { connect, reset, isPending } = useConnect();
 
-// connectors = ['xverse', 'leather', 'okx', 'asigna', 'fordefi', 'wallet-connect']
 await connect('xverse');
 await connect('leather', {
   onSuccess: (address, provider) => {},
   onError: (error) => {},
 });
+
+// Reset stuck connecting state (e.g. when a wallet modal is dismissed)
+reset();
 ```
+
+### `useWallets()`
+
+Returns all configured wallets with their availability status.
+
+```ts
+const { wallets } = useWallets();
+// [{ id: 'xverse', available: true }, { id: 'leather', available: false }, ...]
+
+{wallets.map(({ id, available }) => (
+  <button key={id} onClick={() => connect(id)} disabled={!available}>
+    {id}
+  </button>
+))}
+```
+
+A wallet is `available` when its browser extension is installed. For `wallet-connect`, it's `available` when a `walletConnect.projectId` is provided to the provider.
 
 ### `useDisconnect()`
 
