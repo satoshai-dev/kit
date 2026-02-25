@@ -46,11 +46,14 @@ export const useXverse = ({
     useEffect(() => {
         if (provider !== 'xverse' || !address || !isProviderReady) return;
 
+        let cancelled = false;
         let removeListener: (() => void) | undefined;
 
         const setupXverse = async () => {
             try {
                 const productInfo = await getXverseProductInfo();
+
+                if (cancelled) return;
 
                 if (!shouldSupportAccountChange(productInfo?.version)) return;
 
@@ -58,6 +61,8 @@ export const useXverse = ({
                     'wallet_connect',
                     null
                 );
+
+                if (cancelled) return;
 
                 extractAndValidateStacksAddress(
                     response?.result?.addresses,
@@ -85,6 +90,8 @@ export const useXverse = ({
         void setupXverse();
 
         return () => {
+            cancelled = true;
+
             if (!removeListener) return;
 
             try {
