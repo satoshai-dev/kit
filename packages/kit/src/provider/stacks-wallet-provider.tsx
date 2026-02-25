@@ -5,6 +5,7 @@ import {
     setSelectedProviderId,
     request,
     getSelectedProvider,
+    WalletConnect,
 } from '@stacks/connect';
 import {
     createContext,
@@ -68,6 +69,19 @@ export const StacksWalletProvider = ({
                     return;
                 }
 
+                if (
+                    persisted.provider === 'wallet-connect' &&
+                    walletConnect?.projectId
+                ) {
+                    await WalletConnect.initializeProvider(
+                        buildWalletConnectConfig(
+                            walletConnect.projectId,
+                            walletConnect.metadata,
+                            walletConnect.chains
+                        )
+                    );
+                }
+
                 setAddress(persisted.address);
                 setProvider(persisted.provider);
                 setSelectedProviderId(
@@ -81,7 +95,7 @@ export const StacksWalletProvider = ({
         };
 
         void loadPersistedWallet();
-    }, []);
+    }, [walletConnect]);
 
     const connect = useCallback(
         async (providerId: SupportedStacksWallet, options?: ConnectOptions) => {
@@ -134,15 +148,22 @@ export const StacksWalletProvider = ({
                     STACKS_TO_STACKS_CONNECT_PROVIDERS[typedProvider]
                 );
 
-                const data = walletConnect
+                const wcConfig =
+                    typedProvider === 'wallet-connect' && walletConnect
+                        ? buildWalletConnectConfig(
+                              walletConnect.projectId,
+                              walletConnect.metadata,
+                              walletConnect.chains
+                          )
+                        : undefined;
+
+                if (wcConfig) {
+                    await WalletConnect.initializeProvider(wcConfig);
+                }
+
+                const data = wcConfig
                     ? await request(
-                          {
-                              walletConnect: buildWalletConnectConfig(
-                                  walletConnect.projectId,
-                                  walletConnect.metadata,
-                                  walletConnect.chains
-                              ),
-                          },
+                          { walletConnect: wcConfig },
                           'getAddresses',
                           {}
                       )
