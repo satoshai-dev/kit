@@ -95,7 +95,7 @@ export const StacksWalletProvider = ({
         };
 
         void loadPersistedWallet();
-    }, [walletConnect]);
+    }, [walletConnect?.projectId]);
 
     const connect = useCallback(
         async (providerId: SupportedStacksWallet, options?: ConnectOptions) => {
