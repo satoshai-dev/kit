@@ -11,6 +11,11 @@ New features:
 - `WalletInfo` type exported for consumers
 - Runtime guard: throws if `wallet-connect` is in `wallets` without a `walletConnect.projectId`
 
+Fixes:
+- Moved runtime guard from render body to `useEffect` (React Strict Mode safe)
+- `reset()` now invalidates in-flight `connect()` promises via generation counter (prevents stale state)
+- Guard against concurrent `WalletConnect.initializeProvider` calls between session restore and connect
+
 Breaking:
 - Removed `useAvailableWallets` (replaced by `useWallets`)
 - Removed `connectors` from `useConnect` (replaced by `useWallets`)

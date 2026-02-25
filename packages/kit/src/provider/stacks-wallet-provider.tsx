@@ -12,6 +12,7 @@ import {
     useContext,
     useCallback,
     useEffect,
+    useRef,
     useState,
     useMemo,
 } from 'react';
@@ -51,17 +52,26 @@ export const StacksWalletProvider = ({
     onAddressChange,
     onDisconnect,
 }: StacksWalletProviderProps) => {
-    if (wallets?.includes('wallet-connect') && !walletConnect?.projectId) {
-        throw new Error(
-            'StacksWalletProvider: "wallet-connect" is listed in wallets but no walletConnect.projectId was provided.'
-        );
-    }
-
     const [address, setAddress] = useState<string | undefined>();
     const [provider, setProvider] = useState<
         SupportedStacksWallet | undefined
     >();
     const [isConnecting, setIsConnecting] = useState(false);
+
+    // Generation counter — incremented by reset() to invalidate in-flight connect promises
+    const connectGenRef = useRef(0);
+
+    // Guard against concurrent WalletConnect.initializeProvider calls
+    const wcInitRef = useRef<Promise<void> | null>(null);
+
+    // Fix #1: runtime guard in useEffect instead of render body
+    useEffect(() => {
+        if (wallets?.includes('wallet-connect') && !walletConnect?.projectId) {
+            throw new Error(
+                'StacksWalletProvider: "wallet-connect" is listed in wallets but no walletConnect.projectId was provided.'
+            );
+        }
+    }, [wallets, walletConnect?.projectId]);
 
     useEffect(() => {
         const loadPersistedWallet = async () => {
@@ -83,13 +93,16 @@ export const StacksWalletProvider = ({
                     persisted.provider === 'wallet-connect' &&
                     walletConnect?.projectId
                 ) {
-                    await WalletConnect.initializeProvider(
+                    const initPromise = WalletConnect.initializeProvider(
                         buildWalletConnectConfig(
                             walletConnect.projectId,
                             walletConnect.metadata,
                             walletConnect.chains
                         )
                     );
+                    wcInitRef.current = initPromise;
+                    await initPromise;
+                    wcInitRef.current = null;
                 }
 
                 setAddress(persisted.address);
@@ -143,11 +156,14 @@ export const StacksWalletProvider = ({
                 return;
             }
 
+            // Capture generation so we can detect if reset() was called during await
+            const gen = ++connectGenRef.current;
             setIsConnecting(true);
 
             try {
                 if (typedProvider === 'okx') {
                     const data = await getOKXStacksAddress();
+                    if (connectGenRef.current !== gen) return;
                     setAddress(data.address);
                     setProvider(data.provider);
                     options?.onSuccess?.(data.address, data.provider);
@@ -168,8 +184,16 @@ export const StacksWalletProvider = ({
                         : undefined;
 
                 if (wcConfig) {
-                    await WalletConnect.initializeProvider(wcConfig);
+                    // Wait for any in-flight init, then start ours
+                    if (wcInitRef.current) await wcInitRef.current;
+                    const initPromise =
+                        WalletConnect.initializeProvider(wcConfig);
+                    wcInitRef.current = initPromise;
+                    await initPromise;
+                    wcInitRef.current = null;
                 }
+
+                if (connectGenRef.current !== gen) return;
 
                 const data = wcConfig
                     ? await request(
@@ -178,6 +202,8 @@ export const StacksWalletProvider = ({
                           {}
                       )
                     : await request('getAddresses');
+
+                if (connectGenRef.current !== gen) return;
 
                 const extractedAddress = extractStacksAddress(
                     typedProvider,
@@ -188,18 +214,22 @@ export const StacksWalletProvider = ({
                 setProvider(typedProvider);
                 options?.onSuccess?.(extractedAddress, typedProvider);
             } catch (error) {
+                if (connectGenRef.current !== gen) return;
                 console.error('Failed to connect wallet:', error);
                 getSelectedProvider()?.disconnect?.();
                 clearSelectedProviderId();
                 options?.onError?.(error as Error);
             } finally {
-                setIsConnecting(false);
+                if (connectGenRef.current === gen) {
+                    setIsConnecting(false);
+                }
             }
         },
         [walletConnect]
     );
 
     const reset = useCallback(() => {
+        connectGenRef.current++;
         setIsConnecting(false);
         clearSelectedProviderId();
     }, []);
