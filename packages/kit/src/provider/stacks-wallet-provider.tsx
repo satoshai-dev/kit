@@ -216,8 +216,13 @@ export const StacksWalletProvider = ({
             } catch (error) {
                 if (connectGenRef.current !== gen) return;
                 console.error('Failed to connect wallet:', error);
-                getSelectedProvider()?.disconnect?.();
-                clearSelectedProviderId();
+                // OKX uses its own SDK and never calls setSelectedProviderId,
+                // so getSelectedProvider() would return the previously connected
+                // provider — disconnecting the wrong wallet.
+                if (typedProvider !== 'okx') {
+                    getSelectedProvider()?.disconnect?.();
+                    clearSelectedProviderId();
+                }
                 options?.onError?.(error as Error);
             } finally {
                 if (connectGenRef.current === gen) {
