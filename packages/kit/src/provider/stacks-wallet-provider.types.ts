@@ -44,6 +44,11 @@ export type WalletState =
           provider: SupportedStacksWallet;
       };
 
+export interface WalletInfo {
+    id: SupportedStacksWallet;
+    available: boolean;
+}
+
 export type WalletContextValue = WalletState & {
     connect: (
         providerId: SupportedStacksWallet,
@@ -51,5 +56,5 @@ export type WalletContextValue = WalletState & {
     ) => Promise<void>;
     disconnect: (callback?: () => void) => void;
     reset: () => void;
-    availableWallets: SupportedStacksWallet[];
+    wallets: WalletInfo[];
 };

@@ -2,7 +2,6 @@
 
 import { useMemo } from "react";
 
-import { SUPPORTED_STACKS_WALLETS } from "../constants/wallets";
 import { useStacksWalletContext } from "../provider/stacks-wallet-provider";
 
 export const useConnect = () => {
@@ -12,7 +11,6 @@ export const useConnect = () => {
     () => ({
       connect,
       reset,
-      connectors: SUPPORTED_STACKS_WALLETS,
       isPending: status === "connecting",
     }),
     [connect, reset, status]

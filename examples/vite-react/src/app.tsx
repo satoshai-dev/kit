@@ -4,8 +4,7 @@ import {
     useConnect,
     useDisconnect,
     useBnsName,
-    useAvailableWallets,
-    SUPPORTED_STACKS_WALLETS,
+    useWallets,
 } from '@satoshai/kit';
 
 const wcProjectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID as string | undefined;
@@ -28,7 +27,7 @@ const Wallet = () => {
     const { address, isConnected } = useAddress();
     const { disconnect } = useDisconnect();
     const { bnsName, isLoading: isBnsLoading } = useBnsName(address);
-    const { availableWallets } = useAvailableWallets();
+    const { wallets } = useWallets();
 
     if (isConnected) {
         return (
@@ -59,18 +58,15 @@ const Wallet = () => {
                 </div>
             )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxWidth: '300px' }}>
-                {SUPPORTED_STACKS_WALLETS.map((wallet) => {
-                    const available = availableWallets.includes(wallet);
-                    return (
-                        <button
-                            key={wallet}
-                            onClick={() => connect(wallet)}
-                            disabled={isPending || !available}
-                        >
-                            {wallet}{!available ? ' (not available)' : ''}
-                        </button>
-                    );
-                })}
+                {wallets.map(({ id, available }) => (
+                    <button
+                        key={id}
+                        onClick={() => connect(id)}
+                        disabled={isPending || !available}
+                    >
+                        {id}{!available ? ' (not available)' : ''}
+                    </button>
+                ))}
             </div>
         </div>
     );

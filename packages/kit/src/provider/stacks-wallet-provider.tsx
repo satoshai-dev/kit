@@ -242,14 +242,17 @@ export const StacksWalletProvider = ({
         connect,
     });
 
-    const availableWallets = useMemo(() => {
+    const walletInfos = useMemo(() => {
         const { installed } = getStacksWallets();
-        const configured = wallets ?? SUPPORTED_STACKS_WALLETS;
+        const configured = wallets ?? [...SUPPORTED_STACKS_WALLETS];
 
-        return [...configured].filter((w) => {
-            if (w === 'wallet-connect') return !!walletConnect?.projectId;
-            return installed.includes(w);
-        });
+        return configured.map((w) => ({
+            id: w,
+            available:
+                w === 'wallet-connect'
+                    ? !!walletConnect?.projectId
+                    : installed.includes(w),
+        }));
     }, [wallets, walletConnect?.projectId]);
 
     const value = useMemo((): WalletContextValue => {
@@ -268,9 +271,9 @@ export const StacksWalletProvider = ({
             connect,
             disconnect,
             reset,
-            availableWallets,
+            wallets: walletInfos,
         };
-    }, [address, provider, isConnecting, connect, disconnect, reset, availableWallets]);
+    }, [address, provider, isConnecting, connect, disconnect, reset, walletInfos]);
 
     return (
         <StacksWalletContext.Provider value={value}>
