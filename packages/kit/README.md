@@ -96,6 +96,8 @@ await connect('leather', {
 reset();
 ```
 
+> **Note:** Some wallets (e.g. OKX) never reject the connection promise when the user closes the popup. Use `reset()` to clear the pending state in those cases.
+
 ### `useWallets()`
 
 Returns all configured wallets with their availability status.
