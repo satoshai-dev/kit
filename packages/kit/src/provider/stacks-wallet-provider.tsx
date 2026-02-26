@@ -282,18 +282,15 @@ export const StacksWalletProvider = ({
         connect,
     });
 
-    const walletInfos = useMemo(() => {
-        const { installed } = getStacksWallets();
-        const configured = wallets ?? [...SUPPORTED_STACKS_WALLETS];
-
-        return configured.map((w) => ({
-            id: w,
-            available:
-                w === 'wallet-connect'
-                    ? !!walletConnect?.projectId
-                    : installed.includes(w),
-        }));
-    }, [walletsKey, walletConnect?.projectId]);
+    const { installed } = getStacksWallets();
+    const configured = wallets ?? [...SUPPORTED_STACKS_WALLETS];
+    const walletInfos = configured.map((w) => ({
+        id: w,
+        available:
+            w === 'wallet-connect'
+                ? !!walletConnect?.projectId
+                : installed.includes(w),
+    }));
 
     const value = useMemo((): WalletContextValue => {
         const walletState: WalletState = isConnecting
