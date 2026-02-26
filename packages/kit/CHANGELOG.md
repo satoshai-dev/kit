@@ -1,5 +1,11 @@
 # @satoshai/kit
 
+## 0.3.1
+
+### Patch Changes
+
+- 778c4cd: Fix stale wallet availability for browser extension wallets by removing useMemo from wallet detection
+
 ## 0.3.0
 
 ### Minor Changes
