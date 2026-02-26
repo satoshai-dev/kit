@@ -28,6 +28,7 @@ export type {
     WalletInfo,
     StacksChain,
     ConnectOptions,
+    MutationStatus,
 } from './provider/stacks-wallet-provider.types';
 
 // Constants

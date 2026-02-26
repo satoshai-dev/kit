@@ -1,8 +1,9 @@
 'use client';
 
 import { request } from '@stacks/connect';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
+import type { MutationStatus } from '../provider/stacks-wallet-provider.types';
 import { useAddress } from './use-address';
 
 export interface SignMessageVariables {
@@ -28,7 +29,7 @@ export const useSignMessage = () => {
     const { isConnected, provider } = useAddress();
     const [data, setData] = useState<SignMessageData | undefined>(undefined);
     const [error, setError] = useState<Error | null>(null);
-    const [isPending, setIsPending] = useState(false);
+    const [status, setStatus] = useState<MutationStatus>('idle');
 
     const signMessageAsync = useCallback(
         async (variables: SignMessageVariables): Promise<SignMessageData> => {
@@ -36,7 +37,7 @@ export const useSignMessage = () => {
                 throw new Error('Wallet is not connected');
             }
 
-            setIsPending(true);
+            setStatus('pending');
             setError(null);
             setData(undefined);
 
@@ -61,13 +62,13 @@ export const useSignMessage = () => {
                 }
 
                 setData(result);
-                setIsPending(false);
+                setStatus('success');
                 return result;
             } catch (err) {
                 const error =
                     err instanceof Error ? err : new Error(String(err));
                 setError(error);
-                setIsPending(false);
+                setStatus('error');
                 throw error;
             }
         },
@@ -89,11 +90,25 @@ export const useSignMessage = () => {
         [signMessageAsync]
     );
 
-    return {
-        signMessage,
-        signMessageAsync,
-        data,
-        error,
-        isPending,
-    };
+    const reset = useCallback(() => {
+        setData(undefined);
+        setError(null);
+        setStatus('idle');
+    }, []);
+
+    return useMemo(
+        () => ({
+            signMessage,
+            signMessageAsync,
+            reset,
+            data,
+            error,
+            isError: status === 'error',
+            isIdle: status === 'idle',
+            isPending: status === 'pending',
+            isSuccess: status === 'success',
+            status,
+        }),
+        [signMessage, signMessageAsync, reset, data, error, status]
+    );
 };
