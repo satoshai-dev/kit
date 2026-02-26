@@ -2,8 +2,9 @@
 
 import { request } from '@stacks/connect';
 import { PostConditionMode } from '@stacks/transactions';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
+import type { MutationStatus } from '../../provider/stacks-wallet-provider.types';
 import { useAddress } from '../use-address';
 import { getNetworkFromAddress } from '../../utils/get-network-from-address';
 
@@ -21,7 +22,7 @@ export const useWriteContract = () => {
 
     const [data, setData] = useState<string | undefined>(undefined);
     const [error, setError] = useState<Error | null>(null);
-    const [isPending, setIsPending] = useState(false);
+    const [status, setStatus] = useState<MutationStatus>('idle');
 
     const writeContractAsync = useCallback(
         async (variables: WriteContractVariables): Promise<string> => {
@@ -29,7 +30,7 @@ export const useWriteContract = () => {
                 throw new Error('Wallet is not connected');
             }
 
-            setIsPending(true);
+            setStatus('pending');
             setError(null);
             setData(undefined);
 
@@ -55,7 +56,7 @@ export const useWriteContract = () => {
                         });
 
                     setData(response.txHash);
-                    setIsPending(false);
+                    setStatus('success');
                     return response.txHash;
                 }
 
@@ -77,13 +78,13 @@ export const useWriteContract = () => {
                 }
 
                 setData(response.txid);
-                setIsPending(false);
+                setStatus('success');
                 return response.txid;
             } catch (err) {
                 const error =
                     err instanceof Error ? err : new Error(String(err));
                 setError(error);
-                setIsPending(false);
+                setStatus('error');
                 throw error;
             }
         },
@@ -105,13 +106,27 @@ export const useWriteContract = () => {
         [writeContractAsync]
     );
 
-    return {
-        writeContract,
-        writeContractAsync,
-        data,
-        error,
-        isPending,
-    };
+    const reset = useCallback(() => {
+        setData(undefined);
+        setError(null);
+        setStatus('idle');
+    }, []);
+
+    return useMemo(
+        () => ({
+            writeContract,
+            writeContractAsync,
+            reset,
+            data,
+            error,
+            isError: status === 'error',
+            isIdle: status === 'idle',
+            isPending: status === 'pending',
+            isSuccess: status === 'success',
+            status,
+        }),
+        [writeContract, writeContractAsync, reset, data, error, status]
+    );
 };
 
 export type {

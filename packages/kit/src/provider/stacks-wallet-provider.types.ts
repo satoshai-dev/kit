@@ -2,6 +2,8 @@ import type { SupportedStacksWallet } from '../constants/wallets';
 
 export type StacksChain = 'mainnet' | 'testnet';
 
+export type MutationStatus = 'idle' | 'pending' | 'error' | 'success';
+
 export interface WalletConnectMetadata {
     name: string;
     description: string;
