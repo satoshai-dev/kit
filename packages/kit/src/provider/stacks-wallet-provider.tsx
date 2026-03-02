@@ -96,14 +96,12 @@ export const StacksWalletProvider = ({
     // invalidate memos on every render. (Fixes #5)
     const walletsKey = wallets?.join(',');
 
-    // Fix #1: runtime guard in useEffect instead of render body
-    useEffect(() => {
-        if (wallets?.includes('wallet-connect') && !walletConnect?.projectId) {
-            throw new Error(
-                'StacksWalletProvider: "wallet-connect" is listed in wallets but no walletConnect.projectId was provided.'
-            );
-        }
-    }, [walletsKey, walletConnect?.projectId]);
+    // Validate in render body so React error boundaries can catch it (#21)
+    if (wallets?.includes('wallet-connect') && !walletConnect?.projectId) {
+        throw new Error(
+            'StacksWalletProvider: "wallet-connect" is listed in wallets but no walletConnect.projectId was provided.'
+        );
+    }
 
     // Register the OKX WBIP adapter so it appears in the @stacks/connect modal.
     // Only when connectModal is enabled and OKX is in the configured wallets
