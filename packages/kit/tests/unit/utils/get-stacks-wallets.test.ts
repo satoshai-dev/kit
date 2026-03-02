@@ -13,10 +13,10 @@ describe('getStacksWallets', () => {
         expect(supported).toEqual([
             'xverse',
             'leather',
-            'okx',
             'asigna',
             'fordefi',
             'wallet-connect',
+            'okx',
         ]);
     });
 
