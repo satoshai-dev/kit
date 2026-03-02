@@ -49,6 +49,16 @@ import type {
 import { useXverse } from '../hooks/use-xverse/use-xverse';
 import { getLocalStorageWallet } from '../utils/get-local-storage-wallet';
 
+// Static lookup — built once at module load from @stacks/connect metadata
+const PROVIDER_META_BY_KIT_ID = Object.fromEntries(
+    [...DEFAULT_PROVIDERS, WALLET_CONNECT_PROVIDER, OKX_PROVIDER_META].map(
+        (p) => [
+            STACKS_CONNECT_TO_STACKS_PROVIDERS[p.id],
+            { name: p.name, icon: p.icon ?? '', webUrl: p.webUrl ?? '' },
+        ]
+    )
+) as Record<string, { name: string; icon: string; webUrl: string }>;
+
 const StacksWalletContext = createContext<WalletContextValue | undefined>(
     undefined
 );
@@ -390,31 +400,16 @@ export const StacksWalletProvider = ({
         connect,
     });
 
-    // Static lookup — provider metadata never changes at runtime
-    const providerMetaByKitId = useMemo(() => {
-        const allProviders = [
-            ...DEFAULT_PROVIDERS,
-            WALLET_CONNECT_PROVIDER,
-            OKX_PROVIDER_META,
-        ];
-        return Object.fromEntries(
-            allProviders.map((p) => [
-                STACKS_CONNECT_TO_STACKS_PROVIDERS[p.id],
-                { name: p.name, icon: p.icon ?? '', webUrl: p.webUrl ?? '' },
-            ])
-        ) as Record<string, { name: string; icon: string; webUrl: string }>;
-    }, []);
-
     // Computed in render body (not memoized) so it picks up wallet extensions
-    // injected after hydration. Folded into the value useMemo below so the
-    // context reference stays stable when nothing meaningful changes.
+    // injected after hydration. The context value useMemo below uses
+    // walletInfosKey so the reference stays stable when nothing changes.
     const { installed } = getStacksWallets();
     const configured = wallets ?? [...SUPPORTED_STACKS_WALLETS];
     const walletInfos = configured.map((w) => ({
         id: w,
-        name: providerMetaByKitId[w]?.name ?? w,
-        icon: providerMetaByKitId[w]?.icon ?? '',
-        webUrl: providerMetaByKitId[w]?.webUrl ?? '',
+        name: PROVIDER_META_BY_KIT_ID[w]?.name ?? w,
+        icon: PROVIDER_META_BY_KIT_ID[w]?.icon ?? '',
+        webUrl: PROVIDER_META_BY_KIT_ID[w]?.webUrl ?? '',
         available:
             w === 'wallet-connect'
                 ? !!walletConnect?.projectId
