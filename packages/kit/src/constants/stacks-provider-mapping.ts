@@ -1,7 +1,5 @@
 import type { SupportedStacksWallet } from "./wallets";
 
-export const OKX_PROVIDER_ID = "OkxStacksProvider";
-
 export const STACKS_TO_STACKS_CONNECT_PROVIDERS: Record<
   SupportedStacksWallet,
   | "LeatherProvider"
@@ -9,11 +7,11 @@ export const STACKS_TO_STACKS_CONNECT_PROVIDERS: Record<
   | "AsignaProvider"
   | "FordefiProviders.UtxoProvider"
   | "WalletConnectProvider"
-  | typeof OKX_PROVIDER_ID
+  | "OkxStacksProvider"
 > = {
   xverse: "XverseProviders.BitcoinProvider",
   leather: "LeatherProvider",
-  okx: OKX_PROVIDER_ID,
+  okx: "OkxStacksProvider",
   asigna: "AsignaProvider",
   fordefi: "FordefiProviders.UtxoProvider",
   "wallet-connect": "WalletConnectProvider",
