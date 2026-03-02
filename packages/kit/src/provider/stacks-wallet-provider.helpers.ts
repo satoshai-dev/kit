@@ -1,4 +1,5 @@
 import type { SupportedStacksWallet } from '../constants/wallets';
+import type { WbipProvider } from '@stacks/connect';
 import type {
     WalletConnectMetadata,
     StacksChain,
@@ -58,6 +59,55 @@ export const getOKXStacksAddress = async () => {
         provider: 'okx' as const,
     };
 };
+
+/**
+ * OKX provider metadata for @stacks/connect's modal. Passed via
+ * `defaultProviders` so @stacks/connect places it after natively-registered
+ * wallets (i.e. last in the modal).
+ */
+export const OKX_PROVIDER_META: WbipProvider = {
+    id: 'OkxStacksProvider',
+    name: 'OKX Wallet',
+    icon: 'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiICAgICB4bWxuczp4b2RtPSJodHRwOi8vd3d3LmNvcmVsLmNvbS9jb3JlbGRyYXcvb2RtLzIwMDMiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHZlcnNpb249IjEuMSIgaWQ9IkxheWVyXzEiIHg9IjBweCIgeT0iMHB4IiB2aWV3Qm94PSIwIDAgMjUwMCAyNTAwIiBzdHlsZT0iZW5hYmxlLWJhY2tncm91bmQ6bmV3IDAgMCAyNTAwIDI1MDA7IiB4bWw6c3BhY2U9InByZXNlcnZlIj4KPHN0eWxlIHR5cGU9InRleHQvY3NzIj4KICAgIC5zdDB7ZmlsbC1ydWxlOmV2ZW5vZGQ7Y2xpcC1ydWxlOmV2ZW5vZGQ7fQogICAgLnN0MXtmaWxsOiNGRkZGRkY7fQo8L3N0eWxlPgo8ZyBpZD0iTGF5ZXJfeDAwMjBfMSI+CiAgICA8ZyBpZD0iXzIxODczODEzMjM4NTYiPgogICAgICAgIDxyZWN0IHk9IjAiIGNsYXNzPSJzdDAiIHdpZHRoPSIyNTAwIiBoZWlnaHQ9IjI1MDAiPjwvcmVjdD4KICAgICAgICA8Zz4KICAgICAgICAgICAgPHBhdGggY2xhc3M9InN0MSIgZD0iTTE0NjMsMTAxNWgtNDA0Yy0xNywwLTMxLDE0LTMxLDMxdjQwNGMwLDE3LDE0LDMxLDMxLDMxaDQwNGMxNywwLDMxLTE0LDMxLTMxdi00MDQgICAgIEMxNDk0LDEwMjksMTQ4MCwxMDE1LDE0NjMsMTAxNXoiPjwvcGF0aD4KICAgICAgICAgICAgPHBhdGggY2xhc3M9InN0MSIgZD0iTTk5Niw1NDlINTkyYy0xNywwLTMxLDE0LTMxLDMxdjQwNGMwLDE3LDE0LDMxLDMxLDMxaDQwNGMxNywwLDMxLTE0LDMxLTMxVjU4MEMxMDI3LDU2MywxMDEzLDU0OSw5OTYsNTQ5eiI+PC9wYXRoPgogICAgICAgICAgICA8cGF0aCBjbGFzcz0ic3QxIiBkPSJNMTkzMCw1NDloLTQwNGMtMTcsMC0zMSwxNC0zMSwzMXY0MDRjMCwxNywxNCwzMSwzMSwzMWg0MDRjMTcsMCwzMS0xNCwzMS0zMVY1ODAgICAgIEMxOTYxLDU2MywxOTQ3LDU0OSwxOTMwLDU0OXoiPjwvcGF0aD4KICAgICAgICAgICAgPHBhdGggY2xhc3M9InN0MSIgZD0iTTk5NiwxNDgySDU5MmMtMTcsMC0zMSwxNC0zMSwzMXY0MDRjMCwxNywxNCwzMSwzMSwzMWg0MDRjMTcsMCwzMS0xNCwzMS0zMXYtNDA0ICAgICBDMTAyNywxNDk2LDEwMTMsMTQ4Miw5OTYsMTQ4MnoiPjwvcGF0aD4KICAgICAgICAgICAgPHBhdGggY2xhc3M9InN0MSIgZD0iTTE5MzAsMTQ4MmgtNDA0Yy0xNywwLTMxLDE0LTMxLDMxdjQwNGMwLDE3LDE0LDMxLDMxLDMxaDQwNGMxNywwLDMxLTE0LDMxLTMxdi00MDQgICAgIEMxOTYxLDE0OTYsMTk0NywxNDgyLDE5MzAsMTQ4MnoiPjwvcGF0aD4KICAgICAgICA8L2c+CiAgICA8L2c+CjwvZz4KPC9zdmc+',
+    webUrl: 'https://www.okx.com/',
+};
+
+/**
+ * Mount a minimal WBIP adapter at `window.OkxStacksProvider` so
+ * @stacks/connect's `getProviderFromId()` detects OKX as installed.
+ * Only `getAddresses` is handled — after connection the kit routes
+ * signMessage / callContract through `window.okxwallet.stacks` directly.
+ */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+export const registerOkxProvider = () => {
+    if (typeof window === 'undefined') return;
+
+    if (!(window as any).OkxStacksProvider) {
+        (window as any).OkxStacksProvider = {
+            request: async (method: string) => {
+                if (method === 'getAddresses') {
+                    const data = await getOKXStacksAddress();
+                    return {
+                        result: {
+                            addresses: [
+                                { address: data.address, symbol: 'STX' },
+                            ],
+                        },
+                    };
+                }
+                throw new Error(
+                    `OKX adapter: unsupported method "${method}". Use connect('okx') for direct OKX SDK access.`
+                );
+            },
+        };
+    }
+};
+
+export const unregisterOkxProvider = () => {
+    if (typeof window === 'undefined') return;
+    delete (window as any).OkxStacksProvider;
+};
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 export const extractStacksAddress = (
     typedProvider: SupportedStacksWallet,

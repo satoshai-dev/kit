@@ -19,7 +19,7 @@ export const useConnect = () => {
 
     const connect = useCallback(
         async (
-            providerId: SupportedStacksWallet,
+            providerId?: SupportedStacksWallet,
             options?: ConnectOptions
         ) => {
             setError(null);

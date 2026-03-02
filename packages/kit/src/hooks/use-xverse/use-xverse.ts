@@ -21,7 +21,7 @@ export const useXverse = ({
     provider: SupportedStacksWallet | undefined;
     onAddressChange: (newAddress: string) => void;
     connect: (
-        providerId: SupportedStacksWallet,
+        providerId?: SupportedStacksWallet,
         options?: ConnectOptions
     ) => Promise<void>;
 }) => {

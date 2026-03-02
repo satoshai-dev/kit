@@ -23,7 +23,7 @@ pnpm add @satoshai/kit @stacks/transactions react react-dom
 ## Quick Start
 
 ```tsx
-import { StacksWalletProvider, useConnect, useWallets, useAddress, useDisconnect } from '@satoshai/kit';
+import { StacksWalletProvider, useConnect, useAddress, useDisconnect } from '@satoshai/kit';
 
 function App() {
   return (
@@ -35,7 +35,6 @@ function App() {
 
 function Wallet() {
   const { connect, reset, isPending } = useConnect();
-  const { wallets } = useWallets();
   const { address, isConnected } = useAddress();
   const { disconnect } = useDisconnect();
 
@@ -51,11 +50,7 @@ function Wallet() {
   return (
     <div>
       {isPending && <button onClick={reset}>Cancel</button>}
-      {wallets.map(({ id, available }) => (
-        <button key={id} onClick={() => connect(id)} disabled={!available || isPending}>
-          {id}
-        </button>
-      ))}
+      <button onClick={() => connect()} disabled={isPending}>Connect Wallet</button>
     </div>
   );
 }
@@ -70,6 +65,7 @@ Wrap your app to provide wallet context to all hooks.
 ```tsx
 <StacksWalletProvider
   wallets={['xverse', 'leather', 'wallet-connect']}  // optional — defaults to all supported
+  connectModal={true}                                  // optional — defaults to true
   walletConnect={{ projectId: '...' }}                 // optional — enables WalletConnect
   onConnect={(provider, address) => {}}                // optional
   onAddressChange={(newAddress) => {}}                 // optional — Xverse account switching
@@ -83,11 +79,38 @@ Wrap your app to provide wallet context to all hooks.
 
 > **Important:** Define `wallets` and `walletConnect` outside of your component (or memoize them) so they remain referentially stable across renders. These values are treated as static configuration.
 
+#### `connectModal` (default: `true`)
+
+Controls whether `connect()` with no arguments shows `@stacks/connect`'s built-in wallet selection modal.
+
+```tsx
+// Default — modal handles wallet selection
+<StacksWalletProvider>
+  <App /> {/* connect() opens the modal */}
+</StacksWalletProvider>
+
+// Headless — manage wallet selection yourself (wagmi-style)
+<StacksWalletProvider connectModal={false}>
+  <App /> {/* connect('xverse') only, connect() with no args is a no-op */}
+</StacksWalletProvider>
+```
+
+When `connectModal` is enabled:
+- `connect()` with no args opens the `@stacks/connect` modal
+- `connect('xverse')` with an explicit provider still bypasses the modal
+- The `wallets` prop controls which wallets appear in the modal
+- All 6 wallets are supported in the modal
+- After the user picks a wallet, the kit automatically maps it back and sets state
+
 ### `useConnect()`
 
 ```ts
 const { connect, reset, isPending } = useConnect();
 
+// Open the @stacks/connect modal (when connectModal is enabled, the default)
+await connect();
+
+// Or connect to a specific wallet directly
 await connect('xverse');
 await connect('leather', {
   onSuccess: (address, provider) => {},
@@ -102,16 +125,20 @@ reset();
 
 ### `useWallets()`
 
-Returns all configured wallets with their availability status.
+Returns all configured wallets with their name, icon, download link, and availability status. Metadata is sourced from `@stacks/connect`.
 
 ```ts
 const { wallets } = useWallets();
-// [{ id: 'xverse', available: true }, { id: 'leather', available: false }, ...]
+// [{ id: 'xverse', name: 'Xverse Wallet', icon: 'data:image/svg+xml;...', webUrl: 'https://xverse.app', available: true }, ...]
 
-{wallets.map(({ id, available }) => (
-  <button key={id} onClick={() => connect(id)} disabled={!available}>
-    {id}
-  </button>
+{wallets.map(({ id, name, icon, webUrl, available }) => (
+  <div key={id}>
+    <button onClick={() => connect(id)} disabled={!available}>
+      {icon && <img src={icon} alt={name} width={20} height={20} />}
+      {name}
+    </button>
+    {!available && webUrl && <a href={webUrl} target="_blank">Install</a>}
+  </div>
 ))}
 ```
 
@@ -194,14 +221,16 @@ const { supported, installed } = getStacksWallets();
 
 ## Supported Wallets
 
+All 6 wallets work with both headless (`connect('xverse')`) and modal (`connect()`) modes.
+
 | Wallet | ID |
 |---|---|
 | Xverse | `xverse` |
 | Leather | `leather` |
-| OKX | `okx` |
 | Asigna | `asigna` |
 | Fordefi | `fordefi` |
 | WalletConnect | `wallet-connect` |
+| OKX | `okx` |
 
 ## Peer Dependencies
 

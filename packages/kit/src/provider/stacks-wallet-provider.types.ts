@@ -19,6 +19,8 @@ export interface ConnectOptions {
 export interface StacksWalletProviderProps {
     children: React.ReactNode;
     wallets?: SupportedStacksWallet[];
+    /** Show @stacks/connect's built-in wallet selection modal when `connect()` is called without a `providerId`. Defaults to `true`. Set to `false` to manage wallet selection yourself (headless). */
+    connectModal?: boolean;
     walletConnect?: {
         projectId: string;
         metadata?: Partial<WalletConnectMetadata>;
@@ -48,12 +50,15 @@ export type WalletState =
 
 export interface WalletInfo {
     id: SupportedStacksWallet;
+    name: string;
+    icon: string;
+    webUrl: string;
     available: boolean;
 }
 
 export type WalletContextValue = WalletState & {
     connect: (
-        providerId: SupportedStacksWallet,
+        providerId?: SupportedStacksWallet,
         options?: ConnectOptions
     ) => Promise<void>;
     disconnect: (callback?: () => void) => void;
