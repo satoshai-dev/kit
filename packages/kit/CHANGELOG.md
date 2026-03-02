@@ -1,5 +1,18 @@
 # @satoshai/kit
 
+## 0.4.0
+
+### Minor Changes
+
+- 99778e7: Add `connectModal` prop to `StacksWalletProvider` (default `true`). When enabled, calling `connect()` with no arguments opens `@stacks/connect`'s built-in wallet selection modal. The `wallets` prop controls which wallets appear in the modal via `approvedProviderIds`. Calling `connect('xverse')` with an explicit provider still bypasses the modal regardless of the setting. All 6 wallets are supported in both modal and headless modes.
+- 99778e7: Enrich `WalletInfo` with `name`, `icon`, and `webUrl` fields sourced from `@stacks/connect`'s provider metadata. This enables displaying wallet icons, names, and install links in custom UIs without hardcoding wallet data. Resolves #4.
+
+### Patch Changes
+
+- 74d07c8: Move wallet-connect projectId validation from useEffect to render body so it can be caught by React error boundaries
+- aeb745b: Memoize onAddressChange callback to prevent Xverse setup effect from re-running on every render
+- d0cfe9d: Fix SSR hydration mismatch by returning false for extension-based wallets when window is undefined
+
 ## 0.3.1
 
 ### Patch Changes
