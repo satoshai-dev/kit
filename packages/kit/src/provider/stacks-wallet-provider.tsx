@@ -38,6 +38,7 @@ import {
     buildWalletConnectConfig,
     registerOkxProvider,
     unregisterOkxProvider,
+    OKX_PROVIDER_META,
 } from './stacks-wallet-provider.helpers';
 import type {
     WalletContextValue,
@@ -167,6 +168,11 @@ export const StacksWalletProvider = ({
 
                     const requestOptions: Parameters<typeof request>[0] = {
                         forceWalletSelect: true,
+                        // OKX at the end so it appears last among installed wallets
+                        defaultProviders: [
+                            ...DEFAULT_PROVIDERS,
+                            OKX_PROVIDER_META,
+                        ],
                     };
 
                     if (wallets) {
