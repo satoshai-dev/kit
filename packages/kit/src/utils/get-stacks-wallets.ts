@@ -20,7 +20,7 @@ export const getStacksWallets = (): StacksWallets => {
 export const checkIfStacksProviderIsInstalled = (
     wallet: SupportedStacksWallet
 ): boolean => {
-    if (typeof window === 'undefined') return true;
+    if (typeof window === 'undefined') return wallet === 'wallet-connect';
 
     /* eslint-disable @typescript-eslint/no-explicit-any */
     switch (wallet) {

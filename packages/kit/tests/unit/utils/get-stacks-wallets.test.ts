@@ -38,9 +38,18 @@ describe('checkIfStacksProviderIsInstalled', () => {
         vi.stubGlobal('window', {} as Window);
     });
 
-    it('returns true when window is undefined (SSR)', () => {
+    it('returns false for extension wallets when window is undefined (SSR)', () => {
         vi.stubGlobal('window', undefined);
-        expect(checkIfStacksProviderIsInstalled('xverse')).toBe(true);
+        expect(checkIfStacksProviderIsInstalled('xverse')).toBe(false);
+        expect(checkIfStacksProviderIsInstalled('leather')).toBe(false);
+        expect(checkIfStacksProviderIsInstalled('asigna')).toBe(false);
+        expect(checkIfStacksProviderIsInstalled('okx')).toBe(false);
+        expect(checkIfStacksProviderIsInstalled('fordefi')).toBe(false);
+    });
+
+    it('returns true for wallet-connect when window is undefined (SSR)', () => {
+        vi.stubGlobal('window', undefined);
+        expect(checkIfStacksProviderIsInstalled('wallet-connect')).toBe(true);
     });
 
     it('detects xverse via XverseProviders', () => {
