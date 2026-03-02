@@ -99,7 +99,7 @@ When `connectModal` is enabled:
 - `connect()` with no args opens the `@stacks/connect` modal
 - `connect('xverse')` with an explicit provider still bypasses the modal
 - The `wallets` prop controls which wallets appear in the modal
-- All 6 wallets are supported in the modal, including OKX (via a built-in WBIP adapter)
+- All 6 wallets are supported in the modal
 - After the user picks a wallet, the kit automatically maps it back and sets state
 
 ### `useConnect()`
@@ -223,16 +223,14 @@ const { supported, installed } = getStacksWallets();
 
 All 6 wallets work with both headless (`connect('xverse')`) and modal (`connect()`) modes.
 
-| Wallet | ID | Modal Support |
-|---|---|---|
-| Xverse | `xverse` | Native |
-| Leather | `leather` | Native |
-| Asigna | `asigna` | Native |
-| Fordefi | `fordefi` | Native |
-| WalletConnect | `wallet-connect` | Native |
-| OKX | `okx` | Via built-in WBIP adapter |
-
-> OKX uses its own SDK (`window.okxwallet.stacks`) rather than the WBIP standard. The kit registers a lightweight adapter so OKX appears in the `@stacks/connect` modal alongside native wallets. After connection, all subsequent operations (signing, contract calls) go through the kit's OKX SDK integration automatically.
+| Wallet | ID |
+|---|---|
+| Xverse | `xverse` |
+| Leather | `leather` |
+| Asigna | `asigna` |
+| Fordefi | `fordefi` |
+| WalletConnect | `wallet-connect` |
+| OKX | `okx` |
 
 ## Peer Dependencies
 
