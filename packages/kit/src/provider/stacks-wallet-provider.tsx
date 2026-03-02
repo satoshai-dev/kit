@@ -390,13 +390,18 @@ export const StacksWalletProvider = ({
         onConnect(provider, address);
     }, [address, provider, onConnect]);
 
-    useXverse({
-        address,
-        provider,
-        onAddressChange: (newAddress: string) => {
+    const handleAddressChange = useCallback(
+        (newAddress: string) => {
             setAddress(newAddress);
             onAddressChange?.(newAddress);
         },
+        [onAddressChange]
+    );
+
+    useXverse({
+        address,
+        provider,
+        onAddressChange: handleAddressChange,
         connect,
     });
 
