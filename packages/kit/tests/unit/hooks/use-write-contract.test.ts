@@ -1,20 +1,18 @@
 // @vitest-environment happy-dom
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { uintCV, standardPrincipalCV, PostConditionMode } from '@stacks/transactions';
+import type { StxPostCondition } from '@stacks/transactions';
 
 const mockRequest = vi.fn();
 vi.mock('@stacks/connect', () => ({
     request: mockRequest,
 }));
 
-vi.mock('@stacks/transactions', () => ({
-    PostConditionMode: { Allow: 1, Deny: 2 },
-}));
-
 vi.mock('../../../src/hooks/use-address', () => ({
     useAddress: () => ({
         isConnected: true,
-        address: 'SP123',
+        address: 'SP102V8P0F7JX67ARQ77WEA3D3CFB5XW39REDT0AM',
         provider: 'leather',
     }),
 }));
@@ -35,12 +33,43 @@ const { useWriteContract } = await import(
     '../../../src/hooks/use-write-contract/use-write-contract'
 );
 
+const testAbi = {
+    functions: [
+        {
+            name: 'transfer',
+            access: 'public',
+            args: [
+                { name: 'amount', type: 'uint128' },
+                { name: 'sender', type: 'principal' },
+            ],
+            outputs: { type: { response: { ok: 'bool', error: 'uint128' } } },
+        },
+        {
+            name: 'get-balance',
+            access: 'read_only',
+            args: [{ name: 'who', type: 'principal' }],
+            outputs: { type: { response: { ok: 'uint128', error: 'none' } } },
+        },
+    ],
+    variables: [],
+    maps: [],
+    fungible_tokens: [],
+    non_fungible_tokens: [],
+} as const;
+
+const postCondition: StxPostCondition = {
+    type: 'stx-postcondition',
+    address: 'SP000000000000000000002Q6VF78',
+    condition: 'lte',
+    amount: 1000000n,
+};
+
 const baseVariables = {
-    address: 'SP1CONTRACT',
+    address: 'SP102V8P0F7JX67ARQ77WEA3D3CFB5XW39REDT0AM',
     contract: 'my-contract',
     functionName: 'transfer',
-    args: [],
-    pc: { postConditions: [], mode: 2 }, // Deny
+    args: [] as unknown[],
+    pc: { postConditions: [postCondition], mode: PostConditionMode.Deny },
 };
 
 beforeEach(() => {
@@ -87,7 +116,7 @@ describe('useWriteContract', () => {
         expect(mockRequest).toHaveBeenCalledWith(
             'stx_callContract',
             expect.objectContaining({
-                contract: 'SP1CONTRACT.my-contract',
+                contract: 'SP102V8P0F7JX67ARQ77WEA3D3CFB5XW39REDT0AM.my-contract',
             })
         );
     });
@@ -100,7 +129,7 @@ describe('useWriteContract', () => {
         await act(async () => {
             await result.current.writeContractAsync({
                 ...baseVariables,
-                pc: { postConditions: [], mode: 1 }, // Allow
+                pc: { postConditions: [], mode: PostConditionMode.Allow },
             });
         });
 
@@ -263,5 +292,119 @@ describe('useWriteContract', () => {
         expect(result.current.isSuccess).toBe(true);
         expect(result.current.error).toBeNull();
         expect(result.current.data).toBe('0xabc123');
+    });
+});
+
+describe('useWriteContract – typed mode (with ABI)', () => {
+    it('converts named args to ClarityValues and calls request', async () => {
+        mockRequest.mockResolvedValue({ txid: '0xabc123' });
+
+        const { result } = renderHook(() => useWriteContract());
+
+        let txHash: string | undefined;
+        await act(async () => {
+            txHash = await result.current.writeContractAsync({
+                abi: testAbi,
+                address: 'SP102V8P0F7JX67ARQ77WEA3D3CFB5XW39REDT0AM',
+                contract: 'my-token',
+                functionName: 'transfer',
+                args: {
+                    amount: 1000000n,
+                    sender: 'SP000000000000000000002Q6VF78',
+                },
+                pc: baseVariables.pc,
+            });
+        });
+
+        expect(txHash).toBe('0xabc123');
+        expect(result.current.isSuccess).toBe(true);
+
+        expect(mockRequest).toHaveBeenCalledWith('stx_callContract', {
+            address: 'SP102V8P0F7JX67ARQ77WEA3D3CFB5XW39REDT0AM',
+            contract: 'SP102V8P0F7JX67ARQ77WEA3D3CFB5XW39REDT0AM.my-token',
+            functionName: 'transfer',
+            functionArgs: [
+                uintCV(1000000n),
+                standardPrincipalCV('SP000000000000000000002Q6VF78'),
+            ],
+            postConditions: baseVariables.pc.postConditions,
+            postConditionMode: 'deny',
+            network: 'mainnet',
+        });
+    });
+
+    it('throws when function is not found in ABI', async () => {
+        const { result } = renderHook(() => useWriteContract());
+
+        await act(async () => {
+            await expect(
+                result.current.writeContractAsync({
+                    abi: testAbi,
+                    address: 'SP102V8P0F7JX67ARQ77WEA3D3CFB5XW39REDT0AM',
+                    contract: 'my-token',
+                    functionName: 'nonexistent' as never,
+                    args: {} as never,
+                    pc: baseVariables.pc,
+                })
+            ).rejects.toThrow(
+                '@satoshai/kit: Public function "nonexistent" not found in ABI'
+            );
+        });
+    });
+
+    it('throws when function is read_only (not public)', async () => {
+        const { result } = renderHook(() => useWriteContract());
+
+        await act(async () => {
+            await expect(
+                result.current.writeContractAsync({
+                    abi: testAbi,
+                    address: 'SP102V8P0F7JX67ARQ77WEA3D3CFB5XW39REDT0AM',
+                    contract: 'my-token',
+                    functionName: 'get-balance' as never,
+                    args: {} as never,
+                    pc: baseVariables.pc,
+                })
+            ).rejects.toThrow(
+                '@satoshai/kit: Public function "get-balance" not found in ABI'
+            );
+        });
+    });
+});
+
+describe('useWriteContract – untyped mode (backward compatible)', () => {
+    it('passes ClarityValue[] args directly to request', async () => {
+        mockRequest.mockResolvedValue({ txid: '0xdef456' });
+
+        const { result } = renderHook(() => useWriteContract());
+
+        const args = [
+            uintCV(1000000n),
+            standardPrincipalCV('SP000000000000000000002Q6VF78'),
+        ];
+
+        let txHash: string | undefined;
+        await act(async () => {
+            txHash = await result.current.writeContractAsync({
+                address: 'SP102V8P0F7JX67ARQ77WEA3D3CFB5XW39REDT0AM',
+                contract: 'my-token',
+                functionName: 'transfer',
+                args,
+                pc: baseVariables.pc,
+            });
+        });
+
+        expect(txHash).toBe('0xdef456');
+        expect(result.current.isSuccess).toBe(true);
+
+        expect(mockRequest).toHaveBeenCalledWith('stx_callContract', {
+            address: 'SP102V8P0F7JX67ARQ77WEA3D3CFB5XW39REDT0AM',
+            contract: 'SP102V8P0F7JX67ARQ77WEA3D3CFB5XW39REDT0AM.my-token',
+            functionName: 'transfer',
+            functionArgs: args,
+            postConditions: baseVariables.pc.postConditions,
+            postConditionMode: 'deny',
+            network: 'mainnet',
+        });
     });
 });

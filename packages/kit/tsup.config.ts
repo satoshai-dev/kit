@@ -9,7 +9,7 @@ export default defineConfig({
   splitting: false,
   treeshake: true,
   outDir: 'dist',
-  external: ['react', 'react-dom', '@stacks/transactions', '@stacks/connect'],
+  external: ['react', 'react-dom', '@stacks/transactions', '@stacks/connect', 'clarity-abitype'],
   banner: {
     js: '"use client";',
   },

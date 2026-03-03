@@ -16,6 +16,8 @@ export {
     type WriteContractVariables,
     type WriteContractOptions,
     type PostConditionConfig,
+    type TypedWriteContractVariables,
+    type UntypedWriteContractVariables,
 } from './hooks/use-write-contract/use-write-contract';
 export { useBnsName } from './hooks/use-bns-name';
 export { useWallets } from './hooks/use-wallets';
@@ -31,6 +33,12 @@ export type {
     MutationStatus,
 } from './provider/stacks-wallet-provider.types';
 
+export type {
+    TraitReference,
+    PublicFunctionName,
+    PublicFunctionArgs,
+} from './types/abi';
+
 // Constants
 export {
     SUPPORTED_STACKS_WALLETS,
@@ -44,3 +52,7 @@ export {
     getStacksWallets,
     type StacksWallets,
 } from './utils/get-stacks-wallets';
+export { createContractConfig } from './utils/create-contract-config';
+
+// Re-export ClarityAbi for convenience
+export type { ClarityAbi } from 'clarity-abitype';

@@ -1,21 +1,65 @@
 'use client';
 
 import { request } from '@stacks/connect';
+import type { ClarityValue } from '@stacks/transactions';
 import { PostConditionMode } from '@stacks/transactions';
 import { useCallback, useMemo, useState } from 'react';
 
 import type { MutationStatus } from '../../provider/stacks-wallet-provider.types';
 import { useAddress } from '../use-address';
 import { getNetworkFromAddress } from '../../utils/get-network-from-address';
+import { namedArgsToClarityValues } from '../../utils/to-clarity-value';
 
 import {
     preparePostConditionsForOKX,
     prepareArgsForOKX,
 } from './use-write-contract.helpers';
 import type {
-    WriteContractVariables,
+    PostConditionConfig,
     WriteContractOptions,
+    WriteContractAsyncFn,
+    WriteContractFn,
 } from './use-write-contract.types';
+
+/** Loose internal ABI shape for runtime — avoids importing ClarityAbi which triggers deep instantiation. */
+interface AbiLike {
+    functions: readonly {
+        name: string;
+        access: string;
+        args: readonly { name: string; type: unknown }[];
+    }[];
+}
+
+/** Internal variables shape accepted at runtime (both typed and untyped). */
+interface WriteContractVariablesInternal {
+    abi?: AbiLike;
+    address: string;
+    contract: string;
+    functionName: string;
+    args: Record<string, unknown> | ClarityValue[];
+    pc: PostConditionConfig;
+}
+
+/** Resolve args to ClarityValue[]: convert named args when ABI is present. */
+function resolveArgs(variables: WriteContractVariablesInternal): ClarityValue[] {
+    if (!variables.abi) {
+        return variables.args as ClarityValue[];
+    }
+
+    const fn = variables.abi.functions.find(
+        (f) => f.name === variables.functionName && f.access === 'public'
+    );
+    if (!fn) {
+        throw new Error(
+            `@satoshai/kit: Public function "${variables.functionName}" not found in ABI`
+        );
+    }
+
+    return namedArgsToClarityValues(
+        variables.args as Record<string, unknown>,
+        fn.args
+    );
+}
 
 export const useWriteContract = () => {
     const { isConnected, address, provider } = useAddress();
@@ -25,7 +69,7 @@ export const useWriteContract = () => {
     const [status, setStatus] = useState<MutationStatus>('idle');
 
     const writeContractAsync = useCallback(
-        async (variables: WriteContractVariables): Promise<string> => {
+        async (variables: WriteContractVariablesInternal): Promise<string> => {
             if (!isConnected || !address) {
                 throw new Error('Wallet is not connected');
             }
@@ -33,6 +77,8 @@ export const useWriteContract = () => {
             setStatus('pending');
             setError(null);
             setData(undefined);
+
+            const resolvedArgs = resolveArgs(variables);
 
             try {
                 if (provider === 'okx') {
@@ -45,7 +91,7 @@ export const useWriteContract = () => {
                             contractAddress: variables.address,
                             contractName: variables.contract,
                             functionName: variables.functionName,
-                            functionArgs: prepareArgsForOKX(variables.args),
+                            functionArgs: prepareArgsForOKX(resolvedArgs),
                             postConditions: preparePostConditionsForOKX(
                                 variables.pc.postConditions
                             ),
@@ -64,7 +110,7 @@ export const useWriteContract = () => {
                     address,
                     contract: `${variables.address}.${variables.contract}`,
                     functionName: variables.functionName,
-                    functionArgs: variables.args,
+                    functionArgs: resolvedArgs,
                     postConditions: variables.pc.postConditions,
                     postConditionMode:
                         variables.pc.mode === PostConditionMode.Allow
@@ -89,11 +135,11 @@ export const useWriteContract = () => {
             }
         },
         [isConnected, address, provider]
-    );
+    ) as unknown as WriteContractAsyncFn;
 
     const writeContract = useCallback(
-        (variables: WriteContractVariables, options?: WriteContractOptions) => {
-            writeContractAsync(variables)
+        (variables: WriteContractVariablesInternal, options?: WriteContractOptions) => {
+            (writeContractAsync as unknown as (v: WriteContractVariablesInternal) => Promise<string>)(variables)
                 .then((data) => {
                     options?.onSuccess?.(data);
                     options?.onSettled?.(data, null);
@@ -104,7 +150,7 @@ export const useWriteContract = () => {
                 });
         },
         [writeContractAsync]
-    );
+    ) as unknown as WriteContractFn;
 
     const reset = useCallback(() => {
         setData(undefined);
@@ -133,4 +179,8 @@ export type {
     WriteContractVariables,
     WriteContractOptions,
     PostConditionConfig,
+    TypedWriteContractVariables,
+    UntypedWriteContractVariables,
+    WriteContractAsyncFn,
+    WriteContractFn,
 } from './use-write-contract.types';
