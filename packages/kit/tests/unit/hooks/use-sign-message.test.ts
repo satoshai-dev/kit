@@ -149,6 +149,40 @@ describe('useSignMessage', () => {
         expect(result.current.error).toBeNull();
     });
 
+    it('forwards publicKey to request when provided', async () => {
+        const mockResult = { publicKey: 'pk123', signature: 'sig123' };
+        mockRequest.mockResolvedValue(mockResult);
+
+        const { result } = renderHook(() => useSignMessage());
+
+        await act(async () => {
+            await result.current.signMessageAsync({
+                message: 'hello',
+                publicKey: 'my-pub-key',
+            });
+        });
+
+        expect(mockRequest).toHaveBeenCalledWith('stx_signMessage', {
+            message: 'hello',
+            publicKey: 'my-pub-key',
+        });
+    });
+
+    it('omits publicKey from request when not provided', async () => {
+        const mockResult = { publicKey: 'pk123', signature: 'sig123' };
+        mockRequest.mockResolvedValue(mockResult);
+
+        const { result } = renderHook(() => useSignMessage());
+
+        await act(async () => {
+            await result.current.signMessageAsync({ message: 'hello' });
+        });
+
+        expect(mockRequest).toHaveBeenCalledWith('stx_signMessage', {
+            message: 'hello',
+        });
+    });
+
     it('clears previous error on new call', async () => {
         mockRequest.mockRejectedValue(new Error('First failure'));
 
