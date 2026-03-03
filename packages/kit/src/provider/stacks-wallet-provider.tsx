@@ -61,6 +61,10 @@ export const StacksWalletProvider = ({
     // Generation counter — incremented by reset() to invalidate in-flight connect promises
     const connectGenRef = useRef(0);
 
+    // Track whether the wallet was previously connected so we only fire
+    // onConnect on the initial disconnected → connected transition (#23)
+    const wasConnectedRef = useRef(false);
+
     // Guard against concurrent WalletConnect.initializeProvider calls
     const wcInitRef = useRef<Promise<void> | null>(null);
 
@@ -267,9 +271,13 @@ export const StacksWalletProvider = ({
     }, [address, provider]);
 
     useEffect(() => {
-        if (!address || !provider || !onConnect) return;
+        const isConnected = !!address && !!provider;
 
-        onConnect(provider, address);
+        if (isConnected && !wasConnectedRef.current) {
+            onConnect?.(provider, address);
+        }
+
+        wasConnectedRef.current = isConnected;
     }, [address, provider, onConnect]);
 
     useXverse({
