@@ -16,6 +16,8 @@ export const useBnsName = (address?: string) => {
             return;
         }
 
+        let cancelled = false;
+
         const fetchBnsName = async () => {
             setIsLoading(true);
 
@@ -23,19 +25,28 @@ export const useBnsName = (address?: string) => {
                 const network = getNetworkFromAddress(address);
                 const result = await getPrimaryName({ address, network });
 
+                if (cancelled) return;
+
                 const fullName = result
                     ? `${result.name}.${result.namespace}`
                     : null;
 
                 setBnsName(fullName);
             } catch {
+                if (cancelled) return;
                 setBnsName(null);
             } finally {
-                setIsLoading(false);
+                if (!cancelled) {
+                    setIsLoading(false);
+                }
             }
         };
 
         void fetchBnsName();
+
+        return () => {
+            cancelled = true;
+        };
     }, [address]);
 
     return { bnsName, isLoading };
