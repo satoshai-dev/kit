@@ -33,7 +33,8 @@
   },
   "dependencies": {
     "@stacks/connect": "8.2.5",
-    "bns-v2-sdk": "^2.1.0"
+    "bns-v2-sdk": "^2.1.0",
+    "clarity-abitype": "^0.4.0"
   },
   "peerDependencies": {
     "@stacks/transactions": ">=7.0.0",

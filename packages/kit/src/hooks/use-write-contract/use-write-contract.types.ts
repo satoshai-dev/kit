@@ -3,13 +3,33 @@ import type {
     PostCondition,
     PostConditionMode,
 } from '@stacks/transactions';
+import type {
+    ClarityAbi,
+    ExtractAbiFunctionNames,
+} from 'clarity-abitype';
+
+import type { PublicFunctionArgs } from '../../types/abi';
 
 export interface PostConditionConfig {
     postConditions: PostCondition[];
     mode: PostConditionMode;
 }
 
-export interface WriteContractVariables {
+/** Typed mode: ABI present, args is a named object with autocomplete. */
+export interface TypedWriteContractVariables<
+    TAbi extends ClarityAbi,
+    TFn extends ExtractAbiFunctionNames<TAbi, 'public'>,
+> {
+    abi: TAbi;
+    address: string;
+    contract: string;
+    functionName: TFn;
+    args: PublicFunctionArgs<TAbi, TFn>;
+    pc: PostConditionConfig;
+}
+
+/** Untyped mode: no ABI, args is ClarityValue[] (original behavior). */
+export interface UntypedWriteContractVariables {
     address: string;
     contract: string;
     functionName: string;
@@ -17,8 +37,37 @@ export interface WriteContractVariables {
     pc: PostConditionConfig;
 }
 
+/** Backward-compatible alias for the untyped variant. */
+export type WriteContractVariables = UntypedWriteContractVariables;
+
 export interface WriteContractOptions {
     onSuccess?: (txHash: string) => void;
     onError?: (error: Error) => void;
     onSettled?: (txHash: string | undefined, error: Error | null) => void;
+}
+
+/** Overloaded async function: typed mode (with ABI) or untyped mode. */
+export interface WriteContractAsyncFn {
+    <
+        const TAbi extends ClarityAbi,
+        TFn extends ExtractAbiFunctionNames<TAbi, 'public'>,
+    >(
+        variables: TypedWriteContractVariables<TAbi, TFn>
+    ): Promise<string>;
+    (variables: UntypedWriteContractVariables): Promise<string>;
+}
+
+/** Overloaded fire-and-forget function: typed mode or untyped mode. */
+export interface WriteContractFn {
+    <
+        const TAbi extends ClarityAbi,
+        TFn extends ExtractAbiFunctionNames<TAbi, 'public'>,
+    >(
+        variables: TypedWriteContractVariables<TAbi, TFn>,
+        options?: WriteContractOptions
+    ): void;
+    (
+        variables: UntypedWriteContractVariables,
+        options?: WriteContractOptions
+    ): void;
 }
