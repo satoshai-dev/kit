@@ -1,5 +1,13 @@
 # @satoshai/kit
 
+## 0.4.1
+
+### Patch Changes
+
+- d4da112: Fix stale-fetch race condition in useBnsName when address changes rapidly
+- 1d94bc5: Only fire onConnect callback on initial connection, not on address changes
+- c14c5f0: Add comprehensive test coverage for all hooks: useAddress, useWallets, useBnsName, useSignMessage (OKX + publicKey), useWriteContract (standard + OKX), and useXverse
+
 ## 0.4.0
 
 ### Minor Changes
