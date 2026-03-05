@@ -3,6 +3,12 @@
 import { request } from '@stacks/connect';
 import { useCallback, useMemo, useState } from 'react';
 
+import {
+    BaseError,
+    WalletNotConnectedError,
+    WalletNotFoundError,
+    WalletRequestError,
+} from '../errors';
 import type { MutationStatus } from '../provider/stacks-wallet-provider.types';
 import { useAddress } from './use-address';
 
@@ -28,13 +34,13 @@ export interface SignMessageOptions {
 export const useSignMessage = () => {
     const { isConnected, provider } = useAddress();
     const [data, setData] = useState<SignMessageData | undefined>(undefined);
-    const [error, setError] = useState<Error | null>(null);
+    const [error, setError] = useState<BaseError | null>(null);
     const [status, setStatus] = useState<MutationStatus>('idle');
 
     const signMessageAsync = useCallback(
         async (variables: SignMessageVariables): Promise<SignMessageData> => {
             if (!isConnected) {
-                throw new Error('Wallet is not connected');
+                throw new WalletNotConnectedError();
             }
 
             setStatus('pending');
@@ -46,7 +52,7 @@ export const useSignMessage = () => {
 
                 if (provider === 'okx') {
                     if (!window.okxwallet) {
-                        throw new Error('OKX wallet not found');
+                        throw new WalletNotFoundError({ wallet: 'OKX' });
                     }
 
                     result = await window.okxwallet.stacks.signMessage({
@@ -65,8 +71,13 @@ export const useSignMessage = () => {
                 setStatus('success');
                 return result;
             } catch (err) {
-                const error =
-                    err instanceof Error ? err : new Error(String(err));
+                const error = err instanceof BaseError
+                    ? err
+                    : new WalletRequestError({
+                          method: 'stx_signMessage',
+                          wallet: provider ?? 'unknown',
+                          cause: err instanceof Error ? err : new Error(String(err)),
+                      });
                 setError(error);
                 setStatus('error');
                 throw error;

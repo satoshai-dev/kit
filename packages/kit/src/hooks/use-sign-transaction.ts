@@ -3,6 +3,12 @@
 import { request } from '@stacks/connect';
 import { useCallback, useMemo, useState } from 'react';
 
+import {
+    BaseError,
+    WalletNotConnectedError,
+    UnsupportedMethodError,
+    WalletRequestError,
+} from '../errors';
 import type { MutationStatus } from '../provider/stacks-wallet-provider.types';
 import { useAddress } from './use-address';
 
@@ -28,7 +34,7 @@ export interface SignTransactionOptions {
 export const useSignTransaction = () => {
     const { isConnected, provider } = useAddress();
     const [data, setData] = useState<SignTransactionData | undefined>(undefined);
-    const [error, setError] = useState<Error | null>(null);
+    const [error, setError] = useState<BaseError | null>(null);
     const [status, setStatus] = useState<MutationStatus>('idle');
 
     const signTransactionAsync = useCallback(
@@ -36,13 +42,14 @@ export const useSignTransaction = () => {
             variables: SignTransactionVariables
         ): Promise<SignTransactionData> => {
             if (!isConnected) {
-                throw new Error('Wallet is not connected');
+                throw new WalletNotConnectedError();
             }
 
             if (provider === 'okx') {
-                throw new Error(
-                    'Transaction signing is not supported by OKX wallet'
-                );
+                throw new UnsupportedMethodError({
+                    method: 'stx_signTransaction',
+                    wallet: 'OKX',
+                });
             }
 
             setStatus('pending');
@@ -61,8 +68,13 @@ export const useSignTransaction = () => {
                 setStatus('success');
                 return result;
             } catch (err) {
-                const error =
-                    err instanceof Error ? err : new Error(String(err));
+                const error = err instanceof BaseError
+                    ? err
+                    : new WalletRequestError({
+                          method: 'stx_signTransaction',
+                          wallet: provider ?? 'unknown',
+                          cause: err instanceof Error ? err : new Error(String(err)),
+                      });
                 setError(error);
                 setStatus('error');
                 throw error;

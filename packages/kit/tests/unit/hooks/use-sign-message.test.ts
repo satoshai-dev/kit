@@ -65,7 +65,7 @@ describe('useSignMessage', () => {
 
         expect(result.current.status).toBe('error');
         expect(result.current.isError).toBe(true);
-        expect(result.current.error?.message).toBe('User rejected');
+        expect(result.current.error?.shortMessage).toBe('leather wallet request failed');
         expect(result.current.data).toBeUndefined();
     });
 

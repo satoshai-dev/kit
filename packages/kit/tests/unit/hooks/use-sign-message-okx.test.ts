@@ -55,7 +55,7 @@ describe('useSignMessage (OKX)', () => {
         });
 
         expect(result.current.isError).toBe(true);
-        expect(result.current.error?.message).toBe('OKX wallet not found');
+        expect(result.current.error?.shortMessage).toBe('OKX wallet not found');
     });
 
     it('transitions through pending to success', async () => {
@@ -93,6 +93,6 @@ describe('useSignMessage (OKX)', () => {
         });
 
         expect(result.current.isError).toBe(true);
-        expect(result.current.error?.message).toBe('User cancelled');
+        expect(result.current.error?.shortMessage).toBe('okx wallet request failed');
     });
 });

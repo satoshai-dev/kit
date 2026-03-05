@@ -4,6 +4,12 @@ import { request } from '@stacks/connect';
 import type { ClarityValue, TupleCV } from '@stacks/transactions';
 import { useCallback, useMemo, useState } from 'react';
 
+import {
+    BaseError,
+    WalletNotConnectedError,
+    UnsupportedMethodError,
+    WalletRequestError,
+} from '../errors';
 import type { MutationStatus } from '../provider/stacks-wallet-provider.types';
 import { useAddress } from './use-address';
 
@@ -31,7 +37,7 @@ export const useSignStructuredMessage = () => {
     const [data, setData] = useState<SignStructuredMessageData | undefined>(
         undefined
     );
-    const [error, setError] = useState<Error | null>(null);
+    const [error, setError] = useState<BaseError | null>(null);
     const [status, setStatus] = useState<MutationStatus>('idle');
 
     const signStructuredMessageAsync = useCallback(
@@ -39,13 +45,14 @@ export const useSignStructuredMessage = () => {
             variables: SignStructuredMessageVariables
         ): Promise<SignStructuredMessageData> => {
             if (!isConnected) {
-                throw new Error('Wallet is not connected');
+                throw new WalletNotConnectedError();
             }
 
             if (provider === 'okx') {
-                throw new Error(
-                    'Structured message signing is not supported by OKX wallet'
-                );
+                throw new UnsupportedMethodError({
+                    method: 'stx_signStructuredMessage',
+                    wallet: 'OKX',
+                });
             }
 
             setStatus('pending');
@@ -62,8 +69,13 @@ export const useSignStructuredMessage = () => {
                 setStatus('success');
                 return result;
             } catch (err) {
-                const error =
-                    err instanceof Error ? err : new Error(String(err));
+                const error = err instanceof BaseError
+                    ? err
+                    : new WalletRequestError({
+                          method: 'stx_signStructuredMessage',
+                          wallet: provider ?? 'unknown',
+                          cause: err instanceof Error ? err : new Error(String(err)),
+                      });
                 setError(error);
                 setStatus('error');
                 throw error;
