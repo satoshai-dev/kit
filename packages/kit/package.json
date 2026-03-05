@@ -23,6 +23,7 @@
     "dist"
   ],
   "scripts": {
+    "prepublishOnly": "cp ../../README.md ./README.md",
     "build": "tsup",
     "dev": "tsup --watch",
     "test": "vitest run",
