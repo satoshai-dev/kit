@@ -74,15 +74,22 @@ export const App = () => {
 
 const Wallet = ({ useModal }: { useModal: boolean }) => {
     const { connect, reset, isPending } = useConnect();
-    const { address, isConnected } = useAddress();
+    const { address, isConnected, provider } = useAddress();
     const { disconnect } = useDisconnect();
     const { bnsName, isLoading: isBnsLoading } = useBnsName(address);
     const { wallets } = useWallets();
 
+    const connectedWallet = wallets.find((w) => w.id === provider);
+
     if (isConnected) {
         return (
             <div>
-                <h2>Connected</h2>
+                <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    {connectedWallet?.icon && (
+                        <img src={connectedWallet.icon} alt={connectedWallet.name} width={24} height={24} />
+                    )}
+                    Connected via {connectedWallet?.name ?? provider}
+                </h2>
                 <p>
                     <strong>Address:</strong> {address}
                 </p>
