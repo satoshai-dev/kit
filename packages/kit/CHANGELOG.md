@@ -1,5 +1,17 @@
 # @satoshai/kit
 
+## 0.5.0
+
+### Minor Changes
+
+- 847d21e: Add typed `useWriteContract` with ABI inference (#35). Pass a Clarity ABI (`as const`) to get autocomplete on public function names and type-checked named args — no manual `ClarityValue` construction. Omitting `abi` preserves the current untyped API. Includes `createContractConfig` helper for reusable contract bindings and new type utilities (`PublicFunctionName`, `PublicFunctionArgs`, `TraitReference`).
+- c46ee0a: Add `useTransferSTX` hook for native STX transfers via `stx_transferStx` RPC method with OKX wallet support.
+
+  - `transferSTX(variables, options?)` — fire-and-forget with `onSuccess`, `onError`, `onSettled` callbacks
+  - `transferSTXAsync(variables)` — Promise-based
+  - Accepts `recipient`, `amount`, optional `memo`, `fee`, `nonce`
+  - Returns `data` (txid), `error`, `status`, boolean flags, and `reset()`
+
 ## 0.4.1
 
 ### Patch Changes
