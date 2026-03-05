@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { PostConditionMode, makeUnsignedSTXTokenTransfer, AnchorMode } from '@stacks/transactions';
+import { PostConditionMode, makeUnsignedSTXTokenTransfer, AnchorMode, tupleCV, stringAsciiCV, uintCV } from '@stacks/transactions';
 import {
     StacksWalletProvider,
     useAddress,
@@ -11,6 +11,7 @@ import {
     useTransferSTX,
     useSignTransaction,
     createContractConfig,
+    useSignStructuredMessage,
 } from '@satoshai/kit';
 
 const wcProjectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID as string | undefined;
@@ -102,6 +103,7 @@ const Wallet = ({ useModal }: { useModal: boolean }) => {
                     </p>
                 ) : null}
                 <TransferSTXDemo />
+                <SignStructuredMessageDemo />
                 <WriteContractDemo address={address} />
                 <SignTransactionDemo address={address} />
                 <button onClick={() => disconnect()}>Disconnect</button>
@@ -204,6 +206,51 @@ const TransferSTXDemo = () => {
             {isSuccess && (
                 <p style={{ color: 'green' }}>
                     TX: {data} <button onClick={reset}>Clear</button>
+                </p>
+            )}
+            {isError && (
+                <p style={{ color: 'red' }}>
+                    Error: {error?.message} <button onClick={reset}>Clear</button>
+                </p>
+            )}
+        </div>
+    );
+};
+
+// Demonstrates useSignStructuredMessage hook (SIP-018)
+const SignStructuredMessageDemo = () => {
+    const { signStructuredMessage, isPending, isSuccess, isError, data, error, reset } =
+        useSignStructuredMessage();
+
+    const handleSign = () => {
+        signStructuredMessage(
+            {
+                domain: tupleCV({
+                    name: stringAsciiCV('ExampleApp'),
+                    version: stringAsciiCV('1.0'),
+                    'chain-id': uintCV(1),
+                }),
+                message: tupleCV({
+                    action: stringAsciiCV('authorize'),
+                    amount: uintCV(1000),
+                }),
+            },
+            {
+                onSuccess: (result) => console.log('Structured message signed:', result.signature),
+                onError: (err) => console.error('Structured message signing failed:', err),
+            }
+        );
+    };
+
+    return (
+        <div style={{ marginTop: '1rem', marginBottom: '1rem' }}>
+            <h3>Sign Structured Message (SIP-018)</h3>
+            <button onClick={handleSign} disabled={isPending}>
+                {isPending ? 'Signing...' : 'Sign Structured Message'}
+            </button>
+            {isSuccess && (
+                <p style={{ color: 'green' }}>
+                    Signature: {data?.signature.slice(0, 20)}... <button onClick={reset}>Clear</button>
                 </p>
             )}
             {isError && (

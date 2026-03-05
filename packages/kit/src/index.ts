@@ -12,6 +12,12 @@ export {
     type SignMessageOptions,
 } from './hooks/use-sign-message';
 export {
+    useSignStructuredMessage,
+    type SignStructuredMessageVariables,
+    type SignStructuredMessageData,
+    type SignStructuredMessageOptions,
+} from './hooks/use-sign-structured-message';
+export {
     useSignTransaction,
     type SignTransactionVariables,
     type SignTransactionData,
