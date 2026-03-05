@@ -1,7 +1,13 @@
 'use client';
 
-import { useState } from 'react';
-import { PostConditionMode, uintCV } from '@stacks/transactions';
+import { useEffect, useState } from 'react';
+import {
+    PostConditionMode,
+    makeUnsignedSTXTokenTransfer,
+    tupleCV,
+    stringAsciiCV,
+    uintCV,
+} from '@stacks/transactions';
 import {
     useAddress,
     useConnect,
@@ -10,6 +16,8 @@ import {
     useWallets,
     useWriteContract,
     useTransferSTX,
+    useSignTransaction,
+    useSignStructuredMessage,
 } from '@satoshai/kit';
 
 export default function Home() {
@@ -18,6 +26,10 @@ export default function Home() {
     const { disconnect } = useDisconnect();
     const { bnsName, isLoading: isBnsLoading } = useBnsName(address);
     const { wallets } = useWallets();
+
+    // Prevent hydration mismatch — wallet extension detection only works client-side
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => setMounted(true), []);
 
     const connectedWallet = wallets.find((w) => w.id === provider);
 
@@ -42,7 +54,9 @@ export default function Home() {
                     </p>
                 ) : null}
                 <TransferSTXDemo />
-                <WriteContractDemo address={address!} />
+                <SignStructuredMessageDemo />
+                <WriteContractDemo />
+                <SignTransactionDemo />
                 <button onClick={() => disconnect()}>Disconnect</button>
             </div>
         );
@@ -62,23 +76,29 @@ export default function Home() {
                 <button onClick={() => connect()} disabled={isPending} style={{ fontWeight: 'bold' }}>
                     Connect Wallet
                 </button>
-                {wallets.map(({ id, name, icon, webUrl, available }) => (
-                    <div key={id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <button
-                            onClick={() => connect(id)}
-                            disabled={isPending || !available}
-                            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1 }}
-                        >
-                            {icon && <img src={icon} alt={name} width={20} height={20} />}
-                            {name}
-                        </button>
-                        {!available && webUrl && (
-                            <a href={webUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.8rem' }}>
-                                Install
-                            </a>
-                        )}
-                    </div>
-                ))}
+                {mounted &&
+                    wallets.map(({ id, name, icon, webUrl, available }) => (
+                        <div key={id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <button
+                                onClick={() => connect(id)}
+                                disabled={isPending || !available}
+                                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1 }}
+                            >
+                                {icon && <img src={icon} alt={name} width={20} height={20} />}
+                                {name}
+                            </button>
+                            {!available && webUrl && (
+                                <a
+                                    href={webUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{ fontSize: '0.8rem' }}
+                                >
+                                    Install
+                                </a>
+                            )}
+                        </div>
+                    ))}
             </div>
         </div>
     );
@@ -87,7 +107,23 @@ export default function Home() {
 function TransferSTXDemo() {
     const [recipient, setRecipient] = useState('');
     const [amount, setAmount] = useState('');
+    const [memo, setMemo] = useState('');
     const { transferSTX, isPending, isSuccess, isError, data, error, reset } = useTransferSTX();
+
+    const handleTransfer = () => {
+        if (!recipient || !amount) return;
+        transferSTX(
+            {
+                recipient,
+                amount: BigInt(amount),
+                ...(memo && { memo }),
+            },
+            {
+                onSuccess: (txid) => console.log('STX transfer sent:', txid),
+                onError: (err) => console.error('STX transfer failed:', err),
+            }
+        );
+    };
 
     return (
         <div style={{ marginTop: '1rem', marginBottom: '1rem' }}>
@@ -107,15 +143,14 @@ function TransferSTXDemo() {
                     onChange={(e) => setAmount(e.target.value)}
                     disabled={isPending}
                 />
-                <button
-                    onClick={() =>
-                        transferSTX(
-                            { recipient, amount: BigInt(amount) },
-                            { onSuccess: (txid) => console.log('TX:', txid) }
-                        )
-                    }
-                    disabled={isPending || !recipient || !amount}
-                >
+                <input
+                    type="text"
+                    placeholder="Memo (optional)"
+                    value={memo}
+                    onChange={(e) => setMemo(e.target.value)}
+                    disabled={isPending}
+                />
+                <button onClick={handleTransfer} disabled={isPending || !recipient || !amount}>
                     {isPending ? 'Sending...' : 'Send STX'}
                 </button>
             </div>
@@ -133,27 +168,131 @@ function TransferSTXDemo() {
     );
 }
 
-function WriteContractDemo({ address }: { address: string }) {
+function SignStructuredMessageDemo() {
+    const { signStructuredMessage, isPending, isSuccess, isError, data, error, reset } =
+        useSignStructuredMessage();
+
+    const handleSign = () => {
+        signStructuredMessage(
+            {
+                domain: tupleCV({
+                    name: stringAsciiCV('ExampleApp'),
+                    version: stringAsciiCV('1.0'),
+                    'chain-id': uintCV(1),
+                }),
+                message: tupleCV({
+                    action: stringAsciiCV('authorize'),
+                    amount: uintCV(1000),
+                }),
+            },
+            {
+                onSuccess: (result) => console.log('Structured message signed:', result.signature),
+                onError: (err) => console.error('Structured message signing failed:', err),
+            }
+        );
+    };
+
+    return (
+        <div style={{ marginTop: '1rem', marginBottom: '1rem' }}>
+            <h3>Sign Structured Message (SIP-018)</h3>
+            <button onClick={handleSign} disabled={isPending}>
+                {isPending ? 'Signing...' : 'Sign Structured Message'}
+            </button>
+            {isSuccess && (
+                <p style={{ color: 'green' }}>
+                    Signature: {data?.signature.slice(0, 20)}... <button onClick={reset}>Clear</button>
+                </p>
+            )}
+            {isError && (
+                <p style={{ color: 'red' }}>
+                    Error: {error?.message} <button onClick={reset}>Clear</button>
+                </p>
+            )}
+        </div>
+    );
+}
+
+function SignTransactionDemo() {
+    const [broadcast, setBroadcast] = useState(false);
+    const { signTransaction, isPending, isSuccess, isError, data, error, reset } = useSignTransaction();
+
+    const handleSign = async () => {
+        const tx = await makeUnsignedSTXTokenTransfer({
+            recipient: 'SP000000000000000000002Q6VF78',
+            amount: 1000000n,
+            fee: 200n,
+            nonce: 0n,
+            publicKey: '039e3c97ada3bc88a3e584e3f9472e0fab1300e8a78e1494d8bb1804bc3e6a2fa5',
+        });
+
+        signTransaction(
+            { transaction: tx.serialize(), broadcast },
+            {
+                onSuccess: (result) => console.log('Transaction signed:', result),
+                onError: (err) => console.error('Transaction signing failed:', err),
+            }
+        );
+    };
+
+    return (
+        <div style={{ marginTop: '1rem', marginBottom: '1rem' }}>
+            <h3>Sign Transaction</h3>
+            <p style={{ fontSize: '0.85rem', color: '#666' }}>
+                Signs an unsigned STX transfer of 1 STX to the burn address.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxWidth: '400px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <input
+                        type="checkbox"
+                        checked={broadcast}
+                        onChange={(e) => setBroadcast(e.target.checked)}
+                        disabled={isPending}
+                    />
+                    Broadcast after signing
+                </label>
+                <button onClick={handleSign} disabled={isPending}>
+                    {isPending ? 'Signing...' : 'Sign Transaction'}
+                </button>
+            </div>
+            {isSuccess && data && (
+                <div style={{ color: 'green' }}>
+                    <p>Signed TX: {data.transaction.slice(0, 40)}...</p>
+                    {data.txid && <p>TXID: {data.txid}</p>}
+                    <button onClick={reset}>Clear</button>
+                </div>
+            )}
+            {isError && (
+                <p style={{ color: 'red' }}>
+                    Error: {error?.message} <button onClick={reset}>Clear</button>
+                </p>
+            )}
+        </div>
+    );
+}
+
+function WriteContractDemo() {
     const { writeContract, isPending, isSuccess, isError, data, error } = useWriteContract();
+
+    const handleCall = () => {
+        writeContract(
+            {
+                address: 'SP102V8P0F7JX67ARQ77WEA3D3CFB5XW39REDT0AM',
+                contract: 'my-token',
+                functionName: 'transfer',
+                args: [uintCV(1000000n)],
+                pc: { postConditions: [], mode: PostConditionMode.Allow },
+            },
+            {
+                onSuccess: (txHash) => console.log('TX sent:', txHash),
+                onError: (err) => console.error('TX failed:', err),
+            }
+        );
+    };
 
     return (
         <div style={{ marginTop: '1rem', marginBottom: '1rem' }}>
             <h3>Write Contract</h3>
-            <button
-                onClick={() =>
-                    writeContract(
-                        {
-                            address: 'SP102V8P0F7JX67ARQ77WEA3D3CFB5XW39REDT0AM',
-                            contract: 'my-token',
-                            functionName: 'transfer',
-                            args: [uintCV(1000000n)],
-                            pc: { postConditions: [], mode: PostConditionMode.Allow },
-                        },
-                        { onSuccess: (txHash) => console.log('TX:', txHash) }
-                    )
-                }
-                disabled={isPending}
-            >
+            <button onClick={handleCall} disabled={isPending}>
                 {isPending ? 'Sending...' : 'Call Contract'}
             </button>
             {isSuccess && <p style={{ color: 'green' }}>TX: {data}</p>}
