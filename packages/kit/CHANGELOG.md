@@ -1,5 +1,16 @@
 # @satoshai/kit
 
+## 0.6.0
+
+### Minor Changes
+
+- 791f8f6: Add `useSignStructuredMessage` hook for SIP-018 structured data signing via `stx_signStructuredMessage`.
+- 0e6241e: Add `useSignTransaction` hook for signing transactions without broadcasting via `stx_signTransaction`. Enables sponsored transaction flows.
+
+### Patch Changes
+
+- e566449: Move full API documentation to root README (GitHub landing page), slim packages/kit README to a pointer for npm
+
 ## 0.5.0
 
 ### Minor Changes
