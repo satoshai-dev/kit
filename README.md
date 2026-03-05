@@ -319,18 +319,26 @@ All 6 wallets work with both headless (`connect('xverse')`) and modal (`connect(
 
 ### Wallet Support Matrix
 
-Not every wallet supports every RPC method. The table below shows which hooks work with each wallet:
-
 | Hook | Xverse | Leather | Asigna | Fordefi | WalletConnect | OKX |
 |------|--------|---------|--------|---------|---------------|-----|
 | `useConnect` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| `useSignMessage` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| `useSignStructuredMessage` | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ |
-| `useSignTransaction` | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ |
-| `useWriteContract` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| `useTransferSTX` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `useSignMessage` | ✓ | ✓ | ? | ? | ~ | ✓ |
+| `useSignStructuredMessage` | ✓ | ✓ | ? | ? | ~ | ✗ |
+| `useSignTransaction` | ✓ | ✓ | ? | ? | ~ | ✗ |
+| `useWriteContract` | ✓ | ✓ | ✓ | ✓ | ~ | ✓ |
+| `useTransferSTX` | ✓ | ✓ | ✓ | ✓ | ~ | ✓ |
 
-> **OKX limitations:** OKX wallet uses a proprietary API (`window.okxwallet.stacks`) instead of the standard `@stacks/connect` RPC. It does not support `useSignStructuredMessage` (SIP-018) or `useSignTransaction` (raw transaction signing) — calling these hooks while connected to OKX will throw an error.
+✓ Confirmed supported | ✗ Unsupported (throws error) | ? Unverified | ~ Depends on the connected wallet
+
+**Notes:**
+
+- **OKX** uses a proprietary API (`window.okxwallet.stacks`) instead of the standard `@stacks/connect` RPC. `useSignStructuredMessage` and `useSignTransaction` are explicitly unsupported and will throw.
+- **Asigna** is a multisig wallet. Transaction-based hooks (`useWriteContract`, `useTransferSTX`) work, but message signing hooks may be limited since there is no multisig message signature standard on Stacks.
+- **Fordefi** supports transactions and contract calls on Stacks, but their [supported blockchains](https://docs.fordefi.com/docs/supported-blockchains) page does not list Stacks under message signing capabilities.
+- **WalletConnect** is a relay protocol — all methods are forwarded, but actual support depends on the wallet on the other end.
+- **Xverse** and **Leather** implement the full [SIP-030](https://github.com/janniks/sips/blob/main/sips/sip-030/sip-030-wallet-interface.md) interface.
+
+This matrix was compiled from wallet documentation as of March 2026. Sources: [Xverse Sats Connect docs](https://docs.xverse.app/sats-connect/stacks-methods), [Leather developer docs](https://leather.gitbook.io/developers), [Asigna docs](https://asigna.gitbook.io/asigna), [Fordefi docs](https://docs.fordefi.com/docs/supported-blockchains), [@stacks/connect WalletConnect source](https://github.com/stx-labs/connect/tree/main/packages/connect/src/walletconnect).
 
 ## Peer Dependencies
 
