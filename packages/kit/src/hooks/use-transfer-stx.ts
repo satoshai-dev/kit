@@ -3,6 +3,12 @@
 import { request } from '@stacks/connect';
 import { useCallback, useMemo, useState } from 'react';
 
+import {
+    BaseError,
+    WalletNotConnectedError,
+    WalletNotFoundError,
+    WalletRequestError,
+} from '../errors';
 import type { MutationStatus } from '../provider/stacks-wallet-provider.types';
 import { useAddress } from './use-address';
 import { getNetworkFromAddress } from '../utils/get-network-from-address';
@@ -24,13 +30,13 @@ export interface TransferSTXOptions {
 export const useTransferSTX = () => {
     const { isConnected, address, provider } = useAddress();
     const [data, setData] = useState<string | undefined>(undefined);
-    const [error, setError] = useState<Error | null>(null);
+    const [error, setError] = useState<BaseError | null>(null);
     const [status, setStatus] = useState<MutationStatus>('idle');
 
     const transferSTXAsync = useCallback(
         async (variables: TransferSTXVariables): Promise<string> => {
             if (!isConnected || !address) {
-                throw new Error('Wallet is not connected');
+                throw new WalletNotConnectedError();
             }
 
             setStatus('pending');
@@ -40,7 +46,7 @@ export const useTransferSTX = () => {
             try {
                 if (provider === 'okx') {
                     if (!window.okxwallet) {
-                        throw new Error('OKX wallet not found');
+                        throw new WalletNotFoundError({ wallet: 'OKX' });
                     }
 
                     const response =
@@ -81,8 +87,13 @@ export const useTransferSTX = () => {
                 setStatus('success');
                 return response.txid;
             } catch (err) {
-                const error =
-                    err instanceof Error ? err : new Error(String(err));
+                const error = err instanceof BaseError
+                    ? err
+                    : new WalletRequestError({
+                          method: 'stx_transferStx',
+                          wallet: provider ?? 'unknown',
+                          cause: err instanceof Error ? err : new Error(String(err)),
+                      });
                 setError(error);
                 setStatus('error');
                 throw error;

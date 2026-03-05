@@ -1,3 +1,17 @@
+// Errors
+export {
+    BaseError,
+    type BaseErrorType,
+    WalletNotConnectedError,
+    type WalletNotConnectedErrorType,
+    WalletNotFoundError,
+    type WalletNotFoundErrorType,
+    UnsupportedMethodError,
+    type UnsupportedMethodErrorType,
+    WalletRequestError,
+    type WalletRequestErrorType,
+} from './errors';
+
 // Provider
 export { StacksWalletProvider } from './provider/stacks-wallet-provider';
 

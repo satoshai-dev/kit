@@ -79,7 +79,7 @@ describe('useWriteContract (OKX)', () => {
         });
 
         expect(result.current.isError).toBe(true);
-        expect(result.current.error?.message).toBe('OKX wallet not found');
+        expect(result.current.error?.shortMessage).toBe('OKX wallet not found');
     });
 
     it('passes correct params to OKX signTransaction', async () => {
