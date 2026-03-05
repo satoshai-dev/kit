@@ -10,6 +10,7 @@ Typesafe Stacks wallet & contract interaction library for React. Wagmi-inspired 
 - **`useAddress`** — Access connected wallet address and status
 - **`useSignMessage`** — Sign arbitrary messages
 - **`useWriteContract`** — Call smart contracts with post-conditions
+- **`useTransferSTX`** — Native STX transfers
 - **`useBnsName`** — Resolve BNS v2 names
 - **6 wallets supported** — Xverse, Leather, OKX, Asigna, Fordefi, WalletConnect
 - **Next.js App Router compatible** — `"use client"` directives included
@@ -177,6 +178,28 @@ signMessage({ message: 'Hello Stacks' }, {
 
 // Async style
 const { publicKey, signature } = await signMessageAsync({ message: 'Hello Stacks' });
+```
+
+### `useTransferSTX()`
+
+```ts
+const { transferSTX, transferSTXAsync, data, error, isPending } = useTransferSTX();
+
+// Callback style
+transferSTX({
+  recipient: 'SP2...',
+  amount: 1000000n,  // in microSTX
+  memo: 'optional memo',
+}, {
+  onSuccess: (txid) => {},
+  onError: (error) => {},
+});
+
+// Async style
+const txid = await transferSTXAsync({
+  recipient: 'SP2...',
+  amount: 1000000n,
+});
 ```
 
 ### `useWriteContract()`
