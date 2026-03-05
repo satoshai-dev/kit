@@ -317,6 +317,21 @@ All 6 wallets work with both headless (`connect('xverse')`) and modal (`connect(
 | WalletConnect | `wallet-connect` |
 | OKX | `okx` |
 
+### Wallet Support Matrix
+
+Not every wallet supports every RPC method. The table below shows which hooks work with each wallet:
+
+| Hook | Xverse | Leather | Asigna | Fordefi | WalletConnect | OKX |
+|------|--------|---------|--------|---------|---------------|-----|
+| `useConnect` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `useSignMessage` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `useSignStructuredMessage` | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ |
+| `useSignTransaction` | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ |
+| `useWriteContract` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `useTransferSTX` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+
+> **OKX limitations:** OKX wallet uses a proprietary API (`window.okxwallet.stacks`) instead of the standard `@stacks/connect` RPC. It does not support `useSignStructuredMessage` (SIP-018) or `useSignTransaction` (raw transaction signing) — calling these hooks while connected to OKX will throw an error.
+
 ## Peer Dependencies
 
 - `react` ^18 or ^19
