@@ -9,6 +9,7 @@ Typesafe Stacks wallet & contract interaction library for React. Wagmi-inspired 
 - **`useWallets`** — Configured wallets with availability status
 - **`useAddress`** — Access connected wallet address and status
 - **`useSignMessage`** — Sign arbitrary messages
+- **`useSignStructuredMessage`** — Sign SIP-018 structured data
 - **`useSignTransaction`** — Sign serialized transactions (sponsored tx flows)
 - **`useWriteContract`** — Call smart contracts with post-conditions
 - **`useTransferSTX`** — Native STX transfers
@@ -179,6 +180,40 @@ signMessage({ message: 'Hello Stacks' }, {
 
 // Async style
 const { publicKey, signature } = await signMessageAsync({ message: 'Hello Stacks' });
+```
+
+### `useSignStructuredMessage()`
+
+Sign SIP-018 structured data for typed, verifiable off-chain messages.
+
+> **Note:** OKX wallet does not support structured message signing and will throw an error.
+
+```ts
+import { tupleCV, stringAsciiCV, uintCV } from '@stacks/transactions';
+
+const { signStructuredMessage, signStructuredMessageAsync, data, error, isPending } = useSignStructuredMessage();
+
+// Callback style
+signStructuredMessage({
+  domain: tupleCV({
+    name: stringAsciiCV('MyApp'),
+    version: stringAsciiCV('1.0'),
+    'chain-id': uintCV(1),
+  }),
+  message: tupleCV({
+    action: stringAsciiCV('authorize'),
+    amount: uintCV(1000),
+  }),
+}, {
+  onSuccess: ({ publicKey, signature }) => {},
+  onError: (error) => {},
+});
+
+// Async style
+const { publicKey, signature } = await signStructuredMessageAsync({
+  domain: tupleCV({ ... }),
+  message: tupleCV({ ... }),
+});
 ```
 
 ### `useTransferSTX()`
