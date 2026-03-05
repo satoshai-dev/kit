@@ -16,9 +16,45 @@ import {
     useWallets,
     useWriteContract,
     useTransferSTX,
+    useSignMessage,
     useSignTransaction,
     useSignStructuredMessage,
+    createContractConfig,
 } from '@satoshai/kit';
+
+// Sample SIP-010 token ABI (as const for type inference)
+const tokenAbi = {
+    functions: [
+        {
+            name: 'transfer',
+            access: 'public',
+            args: [
+                { name: 'amount', type: 'uint128' },
+                { name: 'sender', type: 'principal' },
+                { name: 'recipient', type: 'principal' },
+                { name: 'memo', type: { optional: { buffer: { length: 34 } } } },
+            ],
+            outputs: { type: { response: { ok: 'bool', error: 'uint128' } } },
+        },
+        {
+            name: 'get-balance',
+            access: 'read_only',
+            args: [{ name: 'who', type: 'principal' }],
+            outputs: { type: { response: { ok: 'uint128', error: 'none' } } },
+        },
+    ],
+    variables: [],
+    maps: [],
+    fungible_tokens: [{ name: 'my-token' }],
+    non_fungible_tokens: [],
+} as const;
+
+// Pre-bind contract config for reuse
+const myToken = createContractConfig({
+    abi: tokenAbi,
+    address: 'SP102V8P0F7JX67ARQ77WEA3D3CFB5XW39REDT0AM',
+    contract: 'my-token',
+});
 
 export default function Home() {
     const { connect, reset, isPending } = useConnect();
@@ -53,9 +89,10 @@ export default function Home() {
                         <strong>BNS:</strong> {bnsName}
                     </p>
                 ) : null}
+                <SignMessageDemo />
                 <TransferSTXDemo />
                 <SignStructuredMessageDemo />
-                <WriteContractDemo />
+                <WriteContractDemo address={address} />
                 <SignTransactionDemo />
                 <button onClick={() => disconnect()}>Disconnect</button>
             </div>
@@ -100,6 +137,50 @@ export default function Home() {
                         </div>
                     ))}
             </div>
+        </div>
+    );
+}
+
+function SignMessageDemo() {
+    const [message, setMessage] = useState('Hello, Stacks!');
+    const { signMessage, isPending, isSuccess, isError, data, error, reset } = useSignMessage();
+
+    const handleSign = () => {
+        if (!message) return;
+        signMessage(
+            { message },
+            {
+                onSuccess: (result) => console.log('Message signed:', result.signature),
+                onError: (err) => console.error('Message signing failed:', err),
+            }
+        );
+    };
+
+    return (
+        <div style={{ marginTop: '1rem', marginBottom: '1rem' }}>
+            <h3>Sign Message</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxWidth: '400px' }}>
+                <input
+                    type="text"
+                    placeholder="Message to sign"
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    disabled={isPending}
+                />
+                <button onClick={handleSign} disabled={isPending || !message}>
+                    {isPending ? 'Signing...' : 'Sign Message'}
+                </button>
+            </div>
+            {isSuccess && (
+                <p style={{ color: 'green' }}>
+                    Signature: {data?.signature.slice(0, 20)}... <button onClick={reset}>Clear</button>
+                </p>
+            )}
+            {isError && (
+                <p style={{ color: 'red' }}>
+                    Error: {error?.message} <button onClick={reset}>Clear</button>
+                </p>
+            )}
         </div>
     );
 }
@@ -270,17 +351,25 @@ function SignTransactionDemo() {
     );
 }
 
-function WriteContractDemo() {
+function WriteContractDemo({ address }: { address: string }) {
     const { writeContract, isPending, isSuccess, isError, data, error } = useWriteContract();
 
-    const handleCall = () => {
+    const handleTransfer = () => {
+        // Typed mode: functionName autocompletes, args are type-checked
         writeContract(
             {
-                address: 'SP102V8P0F7JX67ARQ77WEA3D3CFB5XW39REDT0AM',
-                contract: 'my-token',
+                ...myToken,
                 functionName: 'transfer',
-                args: [uintCV(1000000n)],
-                pc: { postConditions: [], mode: PostConditionMode.Allow },
+                args: {
+                    amount: 1000000n,
+                    sender: address,
+                    recipient: 'SP000000000000000000002Q6VF78',
+                    memo: null,
+                },
+                pc: {
+                    postConditions: [],
+                    mode: PostConditionMode.Allow,
+                },
             },
             {
                 onSuccess: (txHash) => console.log('TX sent:', txHash),
@@ -291,9 +380,9 @@ function WriteContractDemo() {
 
     return (
         <div style={{ marginTop: '1rem', marginBottom: '1rem' }}>
-            <h3>Write Contract</h3>
-            <button onClick={handleCall} disabled={isPending}>
-                {isPending ? 'Sending...' : 'Call Contract'}
+            <h3>Write Contract (Typed)</h3>
+            <button onClick={handleTransfer} disabled={isPending}>
+                {isPending ? 'Sending...' : 'Transfer 1 STX'}
             </button>
             {isSuccess && <p style={{ color: 'green' }}>TX: {data}</p>}
             {isError && <p style={{ color: 'red' }}>Error: {error?.message}</p>}
