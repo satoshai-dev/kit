@@ -8,6 +8,7 @@ import {
     useBnsName,
     useWallets,
     useWriteContract,
+    useTransferSTX,
     createContractConfig,
 } from '@satoshai/kit';
 
@@ -92,6 +93,7 @@ const Wallet = ({ useModal }: { useModal: boolean }) => {
                         <strong>BNS:</strong> {bnsName}
                     </p>
                 ) : null}
+                <TransferSTXDemo />
                 <WriteContractDemo address={address} />
                 <button onClick={() => disconnect()}>Disconnect</button>
             </div>
@@ -135,6 +137,71 @@ const Wallet = ({ useModal }: { useModal: boolean }) => {
                     </div>
                 ))}
             </div>
+        </div>
+    );
+};
+
+// Demonstrates useTransferSTX hook
+const TransferSTXDemo = () => {
+    const [recipient, setRecipient] = useState('');
+    const [amount, setAmount] = useState('');
+    const [memo, setMemo] = useState('');
+    const { transferSTX, isPending, isSuccess, isError, data, error, reset } = useTransferSTX();
+
+    const handleTransfer = () => {
+        if (!recipient || !amount) return;
+        transferSTX(
+            {
+                recipient,
+                amount: BigInt(amount),
+                ...(memo && { memo }),
+            },
+            {
+                onSuccess: (txid) => console.log('STX transfer sent:', txid),
+                onError: (err) => console.error('STX transfer failed:', err),
+            }
+        );
+    };
+
+    return (
+        <div style={{ marginTop: '1rem', marginBottom: '1rem' }}>
+            <h3>Transfer STX</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxWidth: '400px' }}>
+                <input
+                    type="text"
+                    placeholder="Recipient address (SP...)"
+                    value={recipient}
+                    onChange={(e) => setRecipient(e.target.value)}
+                    disabled={isPending}
+                />
+                <input
+                    type="text"
+                    placeholder="Amount (microSTX)"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    disabled={isPending}
+                />
+                <input
+                    type="text"
+                    placeholder="Memo (optional)"
+                    value={memo}
+                    onChange={(e) => setMemo(e.target.value)}
+                    disabled={isPending}
+                />
+                <button onClick={handleTransfer} disabled={isPending || !recipient || !amount}>
+                    {isPending ? 'Sending...' : 'Send STX'}
+                </button>
+            </div>
+            {isSuccess && (
+                <p style={{ color: 'green' }}>
+                    TX: {data} <button onClick={reset}>Clear</button>
+                </p>
+            )}
+            {isError && (
+                <p style={{ color: 'red' }}>
+                    Error: {error?.message} <button onClick={reset}>Clear</button>
+                </p>
+            )}
         </div>
     );
 };
