@@ -12,6 +12,12 @@ export {
     type SignMessageOptions,
 } from './hooks/use-sign-message';
 export {
+    useSignTransaction,
+    type SignTransactionVariables,
+    type SignTransactionData,
+    type SignTransactionOptions,
+} from './hooks/use-sign-transaction';
+export {
     useTransferSTX,
     type TransferSTXVariables,
     type TransferSTXOptions,

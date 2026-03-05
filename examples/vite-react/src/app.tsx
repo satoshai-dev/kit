@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { PostConditionMode } from '@stacks/transactions';
+import { PostConditionMode, makeUnsignedSTXTokenTransfer, AnchorMode } from '@stacks/transactions';
 import {
     StacksWalletProvider,
     useAddress,
@@ -9,6 +9,7 @@ import {
     useWallets,
     useWriteContract,
     useTransferSTX,
+    useSignTransaction,
     createContractConfig,
 } from '@satoshai/kit';
 
@@ -102,6 +103,7 @@ const Wallet = ({ useModal }: { useModal: boolean }) => {
                 ) : null}
                 <TransferSTXDemo />
                 <WriteContractDemo address={address} />
+                <SignTransactionDemo address={address} />
                 <button onClick={() => disconnect()}>Disconnect</button>
             </div>
         );
@@ -203,6 +205,66 @@ const TransferSTXDemo = () => {
                 <p style={{ color: 'green' }}>
                     TX: {data} <button onClick={reset}>Clear</button>
                 </p>
+            )}
+            {isError && (
+                <p style={{ color: 'red' }}>
+                    Error: {error?.message} <button onClick={reset}>Clear</button>
+                </p>
+            )}
+        </div>
+    );
+};
+
+// Demonstrates useSignTransaction hook
+const SignTransactionDemo = ({ address }: { address: string }) => {
+    const [broadcast, setBroadcast] = useState(false);
+    const { signTransaction, isPending, isSuccess, isError, data, error, reset } = useSignTransaction();
+
+    const handleSign = async () => {
+        const tx = await makeUnsignedSTXTokenTransfer({
+            recipient: 'SP000000000000000000002Q6VF78',
+            amount: 1000000n,
+            anchorMode: AnchorMode.Any,
+            fee: 200n,
+            nonce: 0n,
+            publicKey: '039e3c97ada3bc88a3e584e3f9472e0fab1300e8a78e1494d8bb1804bc3e6a2fa5',
+        });
+
+        signTransaction(
+            { transaction: tx.serialize(), broadcast },
+            {
+                onSuccess: (result) => console.log('Transaction signed:', result),
+                onError: (err) => console.error('Transaction signing failed:', err),
+            }
+        );
+    };
+
+    return (
+        <div style={{ marginTop: '1rem', marginBottom: '1rem' }}>
+            <h3>Sign Transaction</h3>
+            <p style={{ fontSize: '0.85rem', color: '#666' }}>
+                Signs an unsigned STX transfer of 1 STX to the burn address.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxWidth: '400px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <input
+                        type="checkbox"
+                        checked={broadcast}
+                        onChange={(e) => setBroadcast(e.target.checked)}
+                        disabled={isPending}
+                    />
+                    Broadcast after signing
+                </label>
+                <button onClick={handleSign} disabled={isPending}>
+                    {isPending ? 'Signing...' : 'Sign Transaction'}
+                </button>
+            </div>
+            {isSuccess && data && (
+                <div style={{ color: 'green' }}>
+                    <p>Signed TX: {data.transaction.slice(0, 40)}...</p>
+                    {data.txid && <p>TXID: {data.txid}</p>}
+                    <button onClick={reset}>Clear</button>
+                </div>
             )}
             {isError && (
                 <p style={{ color: 'red' }}>

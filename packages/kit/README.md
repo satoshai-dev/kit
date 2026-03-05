@@ -9,6 +9,7 @@ Typesafe Stacks wallet & contract interaction library for React. Wagmi-inspired 
 - **`useWallets`** — Configured wallets with availability status
 - **`useAddress`** — Access connected wallet address and status
 - **`useSignMessage`** — Sign arbitrary messages
+- **`useSignTransaction`** — Sign serialized transactions (sponsored tx flows)
 - **`useWriteContract`** — Call smart contracts with post-conditions
 - **`useTransferSTX`** — Native STX transfers
 - **`useBnsName`** — Resolve BNS v2 names
@@ -221,6 +222,28 @@ writeContract({
 }, {
   onSuccess: (txHash) => {},
   onError: (error) => {},
+});
+```
+
+### `useSignTransaction()`
+
+Sign a serialized transaction without automatically broadcasting it. Useful for sponsored transaction flows where a separate service pays the fee.
+
+> **Note:** OKX wallet does not support raw transaction signing and will throw an error.
+
+```ts
+const { signTransaction, signTransactionAsync, data, error, isPending } = useSignTransaction();
+
+// Callback style
+signTransaction({ transaction: '0x0100...', broadcast: false }, {
+  onSuccess: ({ transaction, txid }) => {},
+  onError: (error) => {},
+});
+
+// Async style
+const { transaction, txid } = await signTransactionAsync({
+  transaction: '0x0100...',
+  broadcast: false,
 });
 ```
 
