@@ -4,15 +4,20 @@ declare global {
             stacks: {
                 connect: () => Promise<{ address: string }>;
                 signTransaction: (params: {
-                    contractAddress: string;
-                    contractName: string;
-                    functionName: string;
-                    functionArgs: string[];
-                    postConditions: string[];
-                    postConditionMode: number;
                     stxAddress: string;
                     txType: string;
                     anchorMode: number;
+                    // Contract call fields
+                    contractAddress?: string;
+                    contractName?: string;
+                    functionName?: string;
+                    functionArgs?: string[];
+                    postConditions?: string[];
+                    postConditionMode?: number;
+                    // Token transfer fields
+                    recipient?: string;
+                    amount?: string;
+                    memo?: string;
                 }) => Promise<{ txHash: string }>;
                 signMessage: (data: {
                     message: string;
