@@ -1,5 +1,15 @@
 # @satoshai/kit
 
+## 0.7.0
+
+### Minor Changes
+
+- 059b504: Add typed error classes (UnsupportedMethodError, WalletNotConnectedError, WalletNotFoundError, WalletRequestError) following wagmi's error pattern. All hooks now throw typed errors that can be checked via `instanceof` or `error.name`.
+
+### Patch Changes
+
+- e34212d: Add wallet support matrix to README documenting which RPC methods each wallet supports
+
 ## 0.6.0
 
 ### Minor Changes
