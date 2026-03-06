@@ -1,5 +1,11 @@
 # @satoshai/kit
 
+## 0.8.1
+
+### Patch Changes
+
+- d70a794: Add tests for `useSignStructuredMessage`, `useSignTransaction`, and `useTransferSTX` (including OKX variants). 34 new tests.
+
 ## 0.8.0
 
 ### Minor Changes
