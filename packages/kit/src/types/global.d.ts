@@ -47,7 +47,7 @@ declare global {
         };
         LeatherProvider?: unknown;
         StacksProvider?: unknown;
-        WalletConnectProvider?: unknown;
+        WalletConnectProvider?: import('../hooks/use-wallet-connect/use-wallet-connect.types').WcStacksConnectProvider;
     }
 }
 
