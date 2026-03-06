@@ -1,5 +1,11 @@
 # @satoshai/kit
 
+## 1.0.0
+
+### Major Changes
+
+- e534e92: Release v1.0.0 — stable API for typesafe Stacks wallet and contract interactions.
+
 ## 0.8.1
 
 ### Patch Changes
