@@ -13,16 +13,21 @@ import {
 import type { MutationStatus } from '../provider/stacks-wallet-provider.types';
 import { useAddress } from './use-address';
 
+/** Variables for {@link useSignStructuredMessage}. */
 export interface SignStructuredMessageVariables {
+    /** The structured Clarity value to sign. */
     message: ClarityValue;
+    /** SIP-018 domain tuple (name, version, chain-id). */
     domain: TupleCV;
 }
 
+/** Successful result from {@link useSignStructuredMessage}. */
 export interface SignStructuredMessageData {
     publicKey: string;
     signature: string;
 }
 
+/** Callback options for the fire-and-forget `signStructuredMessage()` variant. */
 export interface SignStructuredMessageOptions {
     onSuccess?: (data: SignStructuredMessageData) => void;
     onError?: (error: Error) => void;
@@ -32,6 +37,28 @@ export interface SignStructuredMessageOptions {
     ) => void;
 }
 
+/**
+ * Sign SIP-018 structured data with the connected wallet.
+ *
+ * Structured messages include a typed domain separator and a Clarity value
+ * body, enabling verifiable off-chain signatures that are replay-safe.
+ *
+ * @example
+ * ```ts
+ * import { tupleCV, stringAsciiCV, uintCV } from '@stacks/transactions';
+ *
+ * const { signStructuredMessageAsync } = useSignStructuredMessage();
+ *
+ * const { signature } = await signStructuredMessageAsync({
+ *   domain: tupleCV({ name: stringAsciiCV('MyApp'), version: stringAsciiCV('1.0'), 'chain-id': uintCV(1) }),
+ *   message: tupleCV({ action: stringAsciiCV('authorize') }),
+ * });
+ * ```
+ *
+ * @throws {WalletNotConnectedError} If no wallet is connected.
+ * @throws {UnsupportedMethodError} If the wallet does not support structured signing (OKX).
+ * @throws {WalletRequestError} If the wallet rejects or fails the request.
+ */
 export const useSignStructuredMessage = () => {
     const { isConnected, provider } = useAddress();
     const [data, setData] = useState<SignStructuredMessageData | undefined>(

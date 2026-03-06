@@ -3,11 +3,20 @@ import {
     type SupportedStacksWallet,
 } from '../constants/wallets';
 
+/** Result of {@link getStacksWallets}. */
 export interface StacksWallets {
+    /** All wallets supported by `@satoshai/kit`. */
     supported: SupportedStacksWallet[];
+    /** Subset of `supported` whose browser extension is currently detected. */
     installed: SupportedStacksWallet[];
 }
 
+/**
+ * Detect which Stacks wallets are supported and installed.
+ *
+ * Safe to call on the server — `installed` will contain only `'wallet-connect'`
+ * when `window` is undefined.
+ */
 export const getStacksWallets = (): StacksWallets => {
     const supported = [...SUPPORTED_STACKS_WALLETS];
     const installed = supported.filter((wallet) =>

@@ -12,16 +12,23 @@ import {
 import type { MutationStatus } from '../provider/stacks-wallet-provider.types';
 import { useAddress } from './use-address';
 
+/** Variables for {@link useSignMessage}. */
 export interface SignMessageVariables {
+    /** The plaintext message to sign. */
     message: string;
+    /** Optional public key hint for wallets that manage multiple keys. */
     publicKey?: string;
 }
 
+/** Successful result from {@link useSignMessage}. */
 export interface SignMessageData {
+    /** The public key that produced the signature. */
     publicKey: string;
+    /** The hex-encoded signature. */
     signature: string;
 }
 
+/** Callback options for the fire-and-forget `signMessage()` variant. */
 export interface SignMessageOptions {
     onSuccess?: (data: SignMessageData) => void;
     onError?: (error: Error) => void;
@@ -31,6 +38,25 @@ export interface SignMessageOptions {
     ) => void;
 }
 
+/**
+ * Sign an arbitrary plaintext message with the connected wallet.
+ *
+ * Provides both a callback-style `signMessage()` and a promise-based
+ * `signMessageAsync()`, plus mutation status flags.
+ *
+ * @example
+ * ```ts
+ * const { signMessageAsync, isPending } = useSignMessage();
+ *
+ * const { publicKey, signature } = await signMessageAsync({
+ *   message: 'Hello Stacks',
+ * });
+ * ```
+ *
+ * @throws {WalletNotConnectedError} If no wallet is connected.
+ * @throws {WalletNotFoundError} If OKX extension is not installed.
+ * @throws {WalletRequestError} If the wallet rejects or fails the request.
+ */
 export const useSignMessage = () => {
     const { isConnected, provider } = useAddress();
     const [data, setData] = useState<SignMessageData | undefined>(undefined);

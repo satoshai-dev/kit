@@ -2,6 +2,12 @@ import { LOCAL_STORAGE_STACKS } from '../constants/storage-keys';
 import type { SupportedStacksWallet } from '../constants/wallets';
 import { SUPPORTED_STACKS_WALLETS } from '../constants/wallets';
 
+/**
+ * Read the persisted wallet session from localStorage.
+ *
+ * Returns `null` on the server, when no session is stored, or when the
+ * stored provider is not in the supported wallets list.
+ */
 export const getLocalStorageWallet = (): {
     address: string;
     provider: SupportedStacksWallet;

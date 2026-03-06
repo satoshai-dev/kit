@@ -5,6 +5,20 @@ import { useCallback, useMemo, useState } from 'react';
 import type { MutationStatus } from '../provider/stacks-wallet-provider.types';
 import { useStacksWalletContext } from '../provider/stacks-wallet-provider';
 
+/**
+ * Disconnect the currently connected wallet.
+ *
+ * Clears wallet state, removes the persisted session from localStorage,
+ * and resets the provider context back to `disconnected`.
+ *
+ * @example
+ * ```ts
+ * const { disconnect, isSuccess } = useDisconnect();
+ *
+ * disconnect();
+ * disconnect(() => navigate('/'));
+ * ```
+ */
 export const useDisconnect = () => {
     const { disconnect: contextDisconnect } = useStacksWalletContext();
 
