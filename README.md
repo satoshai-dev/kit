@@ -294,13 +294,13 @@ writeContract({
 
 #### Typed mode (with ABI — autocomplete + type-checked args)
 
-When you pass an `abi` object, `functionName` is autocompleted from the ABI's public functions and `args` becomes a named, type-checked object.
+When you pass an `abi` object, `functionName` is autocompleted from the ABI's public functions and `args` becomes a named, type-checked object. Use [`@satoshai/abi-cli`](https://github.com/satoshai-dev/abi-cli) to generate typed ABIs from deployed contracts.
 
 ```ts
 import { PostConditionMode } from '@stacks/transactions';
 import type { ClarityAbi } from '@satoshai/kit';
 
-// 1. Define your ABI (use @satoshai/abi-cli to generate it)
+// 1. Define your ABI (use @satoshai/abi-cli to generate it — https://github.com/satoshai-dev/abi-cli)
 const poolAbi = { functions: [...], ... } as const satisfies ClarityAbi;
 
 // 2. Call with full type safety
