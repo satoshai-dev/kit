@@ -46,6 +46,7 @@ import type {
     ConnectOptions,
     StacksWalletProviderProps,
 } from './stacks-wallet-provider.types';
+import { useWalletConnect } from '../hooks/use-wallet-connect/use-wallet-connect';
 import { useXverse } from '../hooks/use-xverse/use-xverse';
 import { getLocalStorageWallet } from '../utils/get-local-storage-wallet';
 
@@ -409,6 +410,18 @@ export const StacksWalletProvider = ({
         provider,
         onAddressChange: handleAddressChange,
         connect,
+    });
+
+    useWalletConnect({
+        address,
+        provider,
+        onAddressChange: handleAddressChange,
+        onDisconnect: () => {
+            localStorage.removeItem(LOCAL_STORAGE_STACKS);
+            setAddress(undefined);
+            setProvider(undefined);
+            onDisconnect?.();
+        },
     });
 
     // Computed in render body (not memoized) so it picks up wallet extensions
