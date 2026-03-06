@@ -1,5 +1,15 @@
 # @satoshai/kit
 
+## 0.8.0
+
+### Minor Changes
+
+- 4ededf1: Add `useWalletConnect` hook to handle WalletConnect session lifecycle events. Detects zombie sessions on restore via relay ping (10s timeout), listens for wallet-initiated disconnect and account change events (generic `accountsChanged`, SIP-030 `stx_accountChange`, and `stx_accountsChanged`).
+
+### Patch Changes
+
+- f2e8259: Add JSDoc documentation to all consumer-facing exports (hooks, errors, types, utilities, provider) and update README with typed `useWriteContract` examples, `createContractConfig`, error handling guide, mutation return types, and WalletConnect session management.
+
 ## 0.7.0
 
 ### Minor Changes
