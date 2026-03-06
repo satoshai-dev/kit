@@ -1,9 +1,11 @@
+import type { WcUniversalProvider } from './use-wallet-connect.types';
+
 /**
  * Access the underlying UniversalProvider from the @stacks/connect
  * WalletConnect wrapper. Returns null if not available.
  */
-export const getWcUniversalProvider = (): any | null =>
-    (window as any).WalletConnectProvider?.connector?.provider ?? null;
+export const getWcUniversalProvider = (): WcUniversalProvider | null =>
+    window.WalletConnectProvider?.connector?.provider ?? null;
 
 /**
  * Extract the Stacks address from a CAIP-10 account ID array.

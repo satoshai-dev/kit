@@ -59,7 +59,10 @@ export const useWalletConnect = ({
             onDisconnect();
         };
 
-        const handleAccountsChanged = (accounts: WcAccountsChangedEvent) => {
+        const handleAccountsChanged = (
+            ...args: unknown[]
+        ) => {
+            const accounts = args[0] as WcAccountsChangedEvent;
             const newAddress = extractStacksAddressFromCaip10(accounts);
             if (newAddress && newAddress !== address) {
                 onAddressChange(newAddress);
