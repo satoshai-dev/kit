@@ -2,10 +2,9 @@ import { useEffect } from 'react';
 import { clearSelectedProviderId } from '@stacks/connect';
 
 import type { SupportedStacksWallet } from '../../constants/wallets';
-import type { WcAccountsChangedEvent } from './use-wallet-connect.types';
 import {
     getWcUniversalProvider,
-    extractStacksAddressFromCaip10,
+    extractStacksAddress,
     pingSession,
 } from './use-wallet-connect.helpers';
 
@@ -28,12 +27,13 @@ export const useWalletConnect = ({
 
         const validateSession = async () => {
             const alive = await pingSession();
-            if (!cancelled && !alive) {
+            if (cancelled) return;
+            if (!alive) {
                 const wcProvider = getWcUniversalProvider();
                 try {
                     await wcProvider?.disconnect();
                 } catch {
-                    // Ignore — provider may already be cleaned up
+                    // Provider may already be cleaned up
                 }
                 clearSelectedProviderId();
                 onDisconnect();
@@ -59,11 +59,9 @@ export const useWalletConnect = ({
             onDisconnect();
         };
 
-        const handleAccountsChanged = (
-            ...args: unknown[]
-        ) => {
-            const accounts = args[0] as WcAccountsChangedEvent;
-            const newAddress = extractStacksAddressFromCaip10(accounts);
+        const handleAccountsChanged = (...args: unknown[]) => {
+            const accounts = args[0] as (import('./use-wallet-connect.types').StxAccount | string)[];
+            const newAddress = extractStacksAddress(accounts);
             if (newAddress && newAddress !== address) {
                 onAddressChange(newAddress);
             }
@@ -71,11 +69,15 @@ export const useWalletConnect = ({
 
         wcProvider.on('disconnect', handleDisconnect);
         wcProvider.on('accountsChanged', handleAccountsChanged);
+        wcProvider.on('stx_accountChange', handleAccountsChanged);
+        wcProvider.on('stx_accountsChanged', handleAccountsChanged);
 
         return () => {
             try {
                 wcProvider.off('disconnect', handleDisconnect);
                 wcProvider.off('accountsChanged', handleAccountsChanged);
+                wcProvider.off('stx_accountChange', handleAccountsChanged);
+                wcProvider.off('stx_accountsChanged', handleAccountsChanged);
             } catch (error) {
                 console.error(
                     'Failed to remove WalletConnect listeners:',

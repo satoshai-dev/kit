@@ -8,14 +8,14 @@ vi.mock('@stacks/connect', () => ({
 }));
 
 const mockGetWcUniversalProvider = vi.fn();
-const mockExtractStacksAddressFromCaip10 = vi.fn();
+const mockExtractStacksAddress = vi.fn();
 const mockPingSession = vi.fn();
 
 vi.mock(
     '../../../src/hooks/use-wallet-connect/use-wallet-connect.helpers',
     () => ({
         getWcUniversalProvider: mockGetWcUniversalProvider,
-        extractStacksAddressFromCaip10: mockExtractStacksAddressFromCaip10,
+        extractStacksAddress: mockExtractStacksAddress,
         pingSession: mockPingSession,
     })
 );
@@ -29,7 +29,7 @@ const flushPromises = () => new Promise((r) => setTimeout(r, 0));
 beforeEach(() => {
     mockClearSelectedProviderId.mockReset();
     mockGetWcUniversalProvider.mockReset();
-    mockExtractStacksAddressFromCaip10.mockReset();
+    mockExtractStacksAddress.mockReset();
     mockPingSession.mockReset();
 });
 
@@ -151,6 +151,46 @@ describe('useWalletConnect', () => {
                 'accountsChanged',
                 expect.any(Function)
             );
+            expect(mockOn).toHaveBeenCalledWith(
+                'stx_accountChange',
+                expect.any(Function)
+            );
+            expect(mockOn).toHaveBeenCalledWith(
+                'stx_accountsChanged',
+                expect.any(Function)
+            );
+        });
+
+        it('calls onAddressChange via stx_accountChange event', async () => {
+            mockPingSession.mockResolvedValue(true);
+            const listeners: Record<string, Function> = {};
+            mockGetWcUniversalProvider.mockReturnValue({
+                on: (event: string, handler: Function) => {
+                    listeners[event] = handler;
+                },
+                off: vi.fn(),
+            });
+            mockExtractStacksAddress.mockReturnValue('SP456');
+
+            const onAddressChange = vi.fn();
+
+            await act(async () => {
+                renderHook(() =>
+                    useWalletConnect({
+                        address: 'SP123',
+                        provider: 'wallet-connect',
+                        onAddressChange,
+                        onDisconnect: vi.fn(),
+                    })
+                );
+                await flushPromises();
+            });
+
+            act(() => {
+                listeners['stx_accountChange']!([{ address: 'SP456', publicKey: '' }]);
+            });
+
+            expect(onAddressChange).toHaveBeenCalledWith('SP456');
         });
 
         it('calls onDisconnect when disconnect event fires', async () => {
@@ -194,7 +234,7 @@ describe('useWalletConnect', () => {
                 },
                 off: vi.fn(),
             });
-            mockExtractStacksAddressFromCaip10.mockReturnValue('SP456');
+            mockExtractStacksAddress.mockReturnValue('SP456');
 
             const onAddressChange = vi.fn();
 
@@ -214,7 +254,7 @@ describe('useWalletConnect', () => {
                 listeners['accountsChanged']!(['stacks:1:SP456']);
             });
 
-            expect(mockExtractStacksAddressFromCaip10).toHaveBeenCalledWith([
+            expect(mockExtractStacksAddress).toHaveBeenCalledWith([
                 'stacks:1:SP456',
             ]);
             expect(onAddressChange).toHaveBeenCalledWith('SP456');
@@ -229,7 +269,7 @@ describe('useWalletConnect', () => {
                 },
                 off: vi.fn(),
             });
-            mockExtractStacksAddressFromCaip10.mockReturnValue('SP123');
+            mockExtractStacksAddress.mockReturnValue('SP123');
 
             const onAddressChange = vi.fn();
 
@@ -286,6 +326,14 @@ describe('useWalletConnect', () => {
             );
             expect(mockOff).toHaveBeenCalledWith(
                 'accountsChanged',
+                expect.any(Function)
+            );
+            expect(mockOff).toHaveBeenCalledWith(
+                'stx_accountChange',
+                expect.any(Function)
+            );
+            expect(mockOff).toHaveBeenCalledWith(
+                'stx_accountsChanged',
                 expect.any(Function)
             );
         });

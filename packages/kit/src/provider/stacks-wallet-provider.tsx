@@ -412,16 +412,18 @@ export const StacksWalletProvider = ({
         connect,
     });
 
+    const handleWcDisconnect = useCallback(() => {
+        localStorage.removeItem(LOCAL_STORAGE_STACKS);
+        setAddress(undefined);
+        setProvider(undefined);
+        onDisconnect?.();
+    }, [onDisconnect]);
+
     useWalletConnect({
         address,
         provider,
         onAddressChange: handleAddressChange,
-        onDisconnect: () => {
-            localStorage.removeItem(LOCAL_STORAGE_STACKS);
-            setAddress(undefined);
-            setProvider(undefined);
-            onDisconnect?.();
-        },
+        onDisconnect: handleWcDisconnect,
     });
 
     // Computed in render body (not memoized) so it picks up wallet extensions

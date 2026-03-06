@@ -4,8 +4,12 @@ export interface WcDisconnectEvent {
     topic: string;
 }
 
-/** CAIP-10 account IDs, e.g. ["stacks:1:SP123..."] */
-export type WcAccountsChangedEvent = string[];
+/** SIP-030 account object emitted via stx_accountChange events. */
+export interface StxAccount {
+    address: string;
+    publicKey: string;
+}
+
 
 export interface WcSession {
     topic: string;

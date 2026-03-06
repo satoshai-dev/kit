@@ -1,4 +1,7 @@
-import type { WcUniversalProvider } from './use-wallet-connect.types';
+import type {
+    WcUniversalProvider,
+    StxAccount,
+} from './use-wallet-connect.types';
 
 /**
  * Access the underlying UniversalProvider from the @stacks/connect
@@ -8,20 +11,33 @@ export const getWcUniversalProvider = (): WcUniversalProvider | null =>
     window.WalletConnectProvider?.connector?.provider ?? null;
 
 /**
- * Extract the Stacks address from a CAIP-10 account ID array.
- * CAIP-10 format: "stacks:<chainId>:<address>"
+ * Extract the first Stacks address from an stx_accountChange payload.
+ *
+ * SIP-030 defines the data as an array of { address, publicKey } objects.
+ * The generic WC `accountsChanged` event may carry plain addresses or
+ * CAIP-10 strings — this helper handles all three formats.
  */
-export const extractStacksAddressFromCaip10 = (
-    accounts: string[]
+export const extractStacksAddress = (
+    accounts: (StxAccount | string)[],
 ): string | null => {
-    const stxAccount = accounts.find((a) => a.startsWith('stacks:'));
-    if (!stxAccount) return null;
-    return stxAccount.split(':')[2] ?? null;
+    for (const entry of accounts) {
+        if (typeof entry === 'object' && entry !== null && 'address' in entry) {
+            return entry.address;
+        }
+        if (typeof entry === 'string') {
+            if (entry.startsWith('S')) return entry;
+            if (entry.startsWith('stacks:')) return entry.split(':')[2] ?? null;
+        }
+    }
+    return null;
 };
+
+const PING_TIMEOUT_MS = 10_000;
 
 /**
  * Ping the wallet via the WC relay to verify the session is still alive.
  * Returns true if alive, false if dead or unreachable.
+ * Times out after 10 seconds to avoid the default 5-minute WC timeout.
  */
 export const pingSession = async (): Promise<boolean> => {
     const wcProvider = getWcUniversalProvider();
@@ -29,7 +45,12 @@ export const pingSession = async (): Promise<boolean> => {
     const session = wcProvider?.session;
     if (!client || !session) return false;
     try {
-        await client.ping({ topic: session.topic });
+        await Promise.race([
+            client.ping({ topic: session.topic }),
+            new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error('Ping timeout')), PING_TIMEOUT_MS)
+            ),
+        ]);
         return true;
     } catch {
         return false;

@@ -2,43 +2,66 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import {
-    extractStacksAddressFromCaip10,
+    extractStacksAddress,
     getWcUniversalProvider,
     pingSession,
 } from '../../../src/hooks/use-wallet-connect/use-wallet-connect.helpers';
 
-describe('extractStacksAddressFromCaip10', () => {
-    it('extracts address from a stacks CAIP-10 account', () => {
-        expect(
-            extractStacksAddressFromCaip10(['stacks:1:SP123ABC'])
-        ).toBe('SP123ABC');
+describe('extractStacksAddress', () => {
+    it('extracts plain Stacks address starting with S', () => {
+        expect(extractStacksAddress(['SP123ABC'])).toBe('SP123ABC');
     });
 
-    it('returns null when no stacks account is present', () => {
-        expect(
-            extractStacksAddressFromCaip10(['bitcoin:1:bc1qxyz'])
-        ).toBeNull();
+    it('extracts address from CAIP-10 format', () => {
+        expect(extractStacksAddress(['stacks:1:SP123ABC'])).toBe('SP123ABC');
     });
 
     it('returns null for empty array', () => {
-        expect(extractStacksAddressFromCaip10([])).toBeNull();
+        expect(extractStacksAddress([])).toBeNull();
     });
 
-    it('picks the first stacks account when multiple exist', () => {
+    it('returns null when no stacks address is present', () => {
+        expect(extractStacksAddress(['0xabc', 'bitcoin:1:bc1q'])).toBeNull();
+    });
+
+    it('picks the first Stacks address', () => {
+        expect(extractStacksAddress(['SP111', 'SP222'])).toBe('SP111');
+    });
+
+    it('prefers plain address over CAIP-10 when plain comes first', () => {
         expect(
-            extractStacksAddressFromCaip10([
-                'stacks:1:SP111',
-                'stacks:2147483648:ST222',
+            extractStacksAddress(['SP111', 'stacks:1:SP222'])
+        ).toBe('SP111');
+    });
+
+    it('handles mixed formats with non-stacks entries', () => {
+        expect(
+            extractStacksAddress(['0xabc', 'stacks:1:SP999'])
+        ).toBe('SP999');
+    });
+
+    it('handles testnet addresses starting with ST', () => {
+        expect(extractStacksAddress(['ST123ABC'])).toBe('ST123ABC');
+    });
+
+    it('extracts address from SIP-030 account object', () => {
+        expect(
+            extractStacksAddress([{ address: 'SP123ABC', publicKey: '' }])
+        ).toBe('SP123ABC');
+    });
+
+    it('picks first SIP-030 object address', () => {
+        expect(
+            extractStacksAddress([
+                { address: 'SP111', publicKey: 'abc' },
+                { address: 'SP222', publicKey: 'def' },
             ])
         ).toBe('SP111');
     });
 
-    it('ignores non-stacks accounts', () => {
+    it('handles mixed objects and strings', () => {
         expect(
-            extractStacksAddressFromCaip10([
-                'ethereum:1:0xabc',
-                'stacks:1:SP999',
-            ])
+            extractStacksAddress(['0xabc', { address: 'SP999', publicKey: '' }])
         ).toBe('SP999');
     });
 });
