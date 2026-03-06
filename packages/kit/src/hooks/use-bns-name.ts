@@ -5,6 +5,20 @@ import { useEffect, useState } from 'react';
 
 import { getNetworkFromAddress } from '../utils/get-network-from-address';
 
+/**
+ * Resolve a BNS v2 primary name for a Stacks address.
+ *
+ * Returns `null` when no name is registered or the address is undefined.
+ * Automatically detects mainnet/testnet from the address prefix.
+ *
+ * @param address - Stacks address to resolve (`SP...` or `ST...`).
+ *
+ * @example
+ * ```ts
+ * const { bnsName, isLoading } = useBnsName('SP2...');
+ * // bnsName = 'satoshi.btc' | null
+ * ```
+ */
 export const useBnsName = (address?: string) => {
     const [bnsName, setBnsName] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);

@@ -21,6 +21,22 @@ type UseAddressReturn =
           provider: SupportedStacksWallet;
       };
 
+/**
+ * Read the connected wallet's address and connection status.
+ *
+ * Returns a discriminated union — when `isConnected` is `true`, `address`
+ * and `provider` are guaranteed to be defined (no null checks needed).
+ *
+ * @example
+ * ```ts
+ * const { address, isConnected, provider } = useAddress();
+ *
+ * if (isConnected) {
+ *   console.log(address);  // 'SP...' — narrowed to string
+ *   console.log(provider); // 'xverse' | 'leather' | ...
+ * }
+ * ```
+ */
 export const useAddress = (): UseAddressReturn => {
     const { address, status, provider } = useStacksWalletContext();
 

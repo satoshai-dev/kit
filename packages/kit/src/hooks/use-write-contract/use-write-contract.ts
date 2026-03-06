@@ -67,6 +67,46 @@ function resolveArgs(variables: WriteContractVariablesInternal): ClarityValue[] 
     );
 }
 
+/**
+ * Call a public function on a Clarity smart contract.
+ *
+ * Supports two modes:
+ * - **Typed** (with ABI) — pass an ABI object for autocomplete on `functionName` and `args`.
+ * - **Untyped** — pass `ClarityValue[]` directly as `args`.
+ *
+ * @example
+ * ```ts
+ * import { Pc, PostConditionMode } from '@stacks/transactions';
+ *
+ * const { writeContractAsync } = useWriteContract();
+ *
+ * // Untyped mode
+ * const txid = await writeContractAsync({
+ *   address: 'SP...',
+ *   contract: 'my-contract',
+ *   functionName: 'transfer',
+ *   args: [uintCV(100)],
+ *   pc: {
+ *     postConditions: [Pc.principal('SP...').willSendLte(100n).ustx()],
+ *     mode: PostConditionMode.Deny,
+ *   },
+ * });
+ *
+ * // Typed mode (with ABI — enables autocomplete)
+ * const txid = await writeContractAsync({
+ *   abi: myContractAbi,
+ *   address: 'SP...',
+ *   contract: 'my-contract',
+ *   functionName: 'transfer', // autocompleted from ABI
+ *   args: { amount: 100n },   // named args, type-checked
+ *   pc: { postConditions: [], mode: PostConditionMode.Deny },
+ * });
+ * ```
+ *
+ * @throws {WalletNotConnectedError} If no wallet is connected.
+ * @throws {WalletNotFoundError} If OKX extension is not installed.
+ * @throws {WalletRequestError} If the wallet rejects or fails the request.
+ */
 export const useWriteContract = () => {
     const { isConnected, address, provider } = useAddress();
 

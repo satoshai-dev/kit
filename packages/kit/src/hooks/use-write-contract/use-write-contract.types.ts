@@ -10,8 +10,11 @@ import type {
 
 import type { PublicFunctionArgs } from '../../types/abi';
 
+/** Post-condition configuration for contract calls and STX transfers. */
 export interface PostConditionConfig {
+    /** Array of post-conditions that must be satisfied for the transaction to succeed. */
     postConditions: PostCondition[];
+    /** Whether to allow or deny any asset transfers not covered by `postConditions`. */
     mode: PostConditionMode;
 }
 
@@ -40,6 +43,7 @@ export interface UntypedWriteContractVariables {
 /** Backward-compatible alias for the untyped variant. */
 export type WriteContractVariables = UntypedWriteContractVariables;
 
+/** Callback options for the fire-and-forget `writeContract()` variant. */
 export interface WriteContractOptions {
     onSuccess?: (txHash: string) => void;
     onError?: (error: Error) => void;

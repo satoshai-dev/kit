@@ -12,16 +12,23 @@ import {
 import type { MutationStatus } from '../provider/stacks-wallet-provider.types';
 import { useAddress } from './use-address';
 
+/** Variables for {@link useSignTransaction}. */
 export interface SignTransactionVariables {
+    /** Hex-encoded serialized transaction to sign. */
     transaction: string;
+    /** Whether to broadcast the signed transaction. Defaults to the wallet's behavior. */
     broadcast?: boolean;
 }
 
+/** Successful result from {@link useSignTransaction}. */
 export interface SignTransactionData {
+    /** The signed, hex-encoded transaction. */
     transaction: string;
+    /** Transaction ID, present when the wallet broadcasts it. */
     txid?: string;
 }
 
+/** Callback options for the fire-and-forget `signTransaction()` variant. */
 export interface SignTransactionOptions {
     onSuccess?: (data: SignTransactionData) => void;
     onError?: (error: Error) => void;
@@ -31,6 +38,26 @@ export interface SignTransactionOptions {
     ) => void;
 }
 
+/**
+ * Sign a serialized Stacks transaction without automatic broadcast.
+ *
+ * Useful for sponsored transaction flows where a separate service pays the
+ * fee and broadcasts the transaction.
+ *
+ * @example
+ * ```ts
+ * const { signTransactionAsync } = useSignTransaction();
+ *
+ * const { transaction } = await signTransactionAsync({
+ *   transaction: '0x0100...',
+ *   broadcast: false,
+ * });
+ * ```
+ *
+ * @throws {WalletNotConnectedError} If no wallet is connected.
+ * @throws {UnsupportedMethodError} If the wallet does not support raw signing (OKX).
+ * @throws {WalletRequestError} If the wallet rejects or fails the request.
+ */
 export const useSignTransaction = () => {
     const { isConnected, provider } = useAddress();
     const [data, setData] = useState<SignTransactionData | undefined>(undefined);

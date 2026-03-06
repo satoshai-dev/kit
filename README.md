@@ -11,14 +11,16 @@ Typesafe Stacks wallet & contract interaction library for React. Wagmi-inspired 
 - **`StacksWalletProvider`** — React context provider for wallet state
 - **`useConnect` / `useDisconnect`** — Connect and disconnect wallets
 - **`useWallets`** — Configured wallets with availability status
-- **`useAddress`** — Access connected wallet address and status
+- **`useAddress`** — Access connected wallet address and status (discriminated union)
 - **`useSignMessage`** — Sign arbitrary messages
 - **`useSignStructuredMessage`** — Sign SIP-018 structured data
 - **`useSignTransaction`** — Sign serialized transactions (sponsored tx flows)
-- **`useWriteContract`** — Call smart contracts with post-conditions
+- **`useWriteContract`** — Call smart contracts with post-conditions (typed or untyped)
 - **`useTransferSTX`** — Native STX transfers
 - **`useBnsName`** — Resolve BNS v2 names
+- **Typed errors** — `BaseError`, `WalletNotConnectedError`, `WalletNotFoundError`, `UnsupportedMethodError`, `WalletRequestError`
 - **6 wallets supported** — Xverse, Leather, OKX, Asigna, Fordefi, WalletConnect
+- **WalletConnect session management** — Zombie session detection, wallet-initiated disconnect, and account change events
 - **Next.js App Router compatible** — `"use client"` directives included
 
 ## Install
@@ -75,12 +77,21 @@ Wrap your app to provide wallet context to all hooks.
   connectModal={true}                                  // optional — defaults to true
   walletConnect={{ projectId: '...' }}                 // optional — enables WalletConnect
   onConnect={(provider, address) => {}}                // optional
-  onAddressChange={(newAddress) => {}}                 // optional — Xverse account switching
+  onAddressChange={(newAddress) => {}}                 // optional — Xverse/WalletConnect account switching
   onDisconnect={() => {}}                              // optional
 >
   {children}
 </StacksWalletProvider>
 ```
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `wallets` | `SupportedStacksWallet[]` | All 6 wallets | Wallets to enable. |
+| `connectModal` | `boolean` | `true` | Show `@stacks/connect` modal on `connect()` with no args. |
+| `walletConnect` | `{ projectId, metadata?, chains? }` | — | WalletConnect config. Required when `wallets` includes `'wallet-connect'`. |
+| `onConnect` | `(provider, address) => void` | — | Called after successful connection. |
+| `onAddressChange` | `(newAddress) => void` | — | Called when the connected account changes. |
+| `onDisconnect` | `() => void` | — | Called when the wallet disconnects. |
 
 > If `wallets` includes `'wallet-connect'`, you must provide `walletConnect.projectId` or the provider will throw at mount.
 
@@ -111,8 +122,10 @@ When `connectModal` is enabled:
 
 ### `useConnect()`
 
+Connect to a Stacks wallet. Returns a mutation-style object.
+
 ```ts
-const { connect, reset, isPending } = useConnect();
+const { connect, reset, error, isPending, isSuccess, isError, isIdle, status } = useConnect();
 
 // Open the @stacks/connect modal (when connectModal is enabled, the default)
 await connect();
@@ -153,8 +166,10 @@ A wallet is `available` when its browser extension is installed. For `wallet-con
 
 ### `useDisconnect()`
 
+Disconnect the current wallet and clear the persisted session.
+
 ```ts
-const { disconnect } = useDisconnect();
+const { disconnect, reset, error, isSuccess, isError, isIdle, isPending, status } = useDisconnect();
 
 disconnect();
 disconnect(() => { /* callback after disconnect */ });
@@ -162,24 +177,29 @@ disconnect(() => { /* callback after disconnect */ });
 
 ### `useAddress()`
 
+Read the connected wallet's address and connection status. Returns a **discriminated union** — when `isConnected` is `true`, `address` and `provider` are narrowed to defined values (no null checks needed).
+
 ```ts
 const { address, isConnected, isConnecting, isDisconnected, provider } = useAddress();
 
 if (isConnected) {
-  console.log(address);  // 'SP...' or 'ST...'
+  console.log(address);  // 'SP...' or 'ST...' — narrowed to string
   console.log(provider); // 'xverse' | 'leather' | ...
 }
 ```
 
 ### `useSignMessage()`
 
+Sign an arbitrary plaintext message.
+
 ```ts
-const { signMessage, signMessageAsync, data, error, isPending } = useSignMessage();
+const { signMessage, signMessageAsync, data, error, isPending, reset } = useSignMessage();
 
 // Callback style
 signMessage({ message: 'Hello Stacks' }, {
   onSuccess: ({ publicKey, signature }) => {},
   onError: (error) => {},
+  onSettled: (data, error) => {},
 });
 
 // Async style
@@ -190,7 +210,7 @@ const { publicKey, signature } = await signMessageAsync({ message: 'Hello Stacks
 
 Sign SIP-018 structured data for typed, verifiable off-chain messages.
 
-> **Note:** OKX wallet does not support structured message signing and will throw an error.
+> **Note:** OKX wallet does not support structured message signing and will throw an `UnsupportedMethodError`.
 
 ```ts
 import { tupleCV, stringAsciiCV, uintCV } from '@stacks/transactions';
@@ -222,14 +242,18 @@ const { publicKey, signature } = await signStructuredMessageAsync({
 
 ### `useTransferSTX()`
 
+Transfer native STX tokens. Amount is in **microSTX** (1 STX = 1,000,000 microSTX).
+
 ```ts
-const { transferSTX, transferSTXAsync, data, error, isPending } = useTransferSTX();
+const { transferSTX, transferSTXAsync, data, error, isPending, reset } = useTransferSTX();
 
 // Callback style
 transferSTX({
   recipient: 'SP2...',
-  amount: 1000000n,  // in microSTX
+  amount: 1000000n,  // 1 STX
   memo: 'optional memo',
+  fee: 2000n,        // optional custom fee
+  nonce: 42n,        // optional custom nonce
 }, {
   onSuccess: (txid) => {},
   onError: (error) => {},
@@ -244,10 +268,14 @@ const txid = await transferSTXAsync({
 
 ### `useWriteContract()`
 
-```ts
-import { Pc, PostConditionMode } from '@stacks/transactions';
+Call a public function on a Clarity smart contract. Supports two modes:
 
-const { writeContract, writeContractAsync, data, error, isPending } = useWriteContract();
+#### Untyped mode (ClarityValue[] args)
+
+```ts
+import { uintCV, Pc, PostConditionMode } from '@stacks/transactions';
+
+const { writeContract, writeContractAsync, data, error, isPending, reset } = useWriteContract();
 
 writeContract({
   address: 'SP...',
@@ -264,14 +292,58 @@ writeContract({
 });
 ```
 
+#### Typed mode (with ABI — autocomplete + type-checked args)
+
+When you pass an `abi` object, `functionName` is autocompleted from the ABI's public functions and `args` becomes a named, type-checked object.
+
+```ts
+import { PostConditionMode } from '@stacks/transactions';
+import type { ClarityAbi } from '@satoshai/kit';
+
+// 1. Define your ABI (use @satoshai/abi-cli to generate it)
+const poolAbi = { functions: [...], ... } as const satisfies ClarityAbi;
+
+// 2. Call with full type safety
+const txid = await writeContractAsync({
+  abi: poolAbi,
+  address: 'SP...',
+  contract: 'pool-v1',
+  functionName: 'deposit',     // autocompleted
+  args: { amount: 1000000n },  // named args, type-checked
+  pc: { postConditions: [], mode: PostConditionMode.Deny },
+});
+```
+
+#### `createContractConfig()`
+
+Pre-bind ABI + address + contract for reuse across multiple calls:
+
+```ts
+import { createContractConfig } from '@satoshai/kit';
+
+const pool = createContractConfig({
+  abi: poolAbi,
+  address: 'SP...',
+  contract: 'pool-v1',
+});
+
+// Spread into writeContract — functionName and args stay typed
+writeContract({
+  ...pool,
+  functionName: 'deposit',
+  args: { amount: 1000000n },
+  pc: { postConditions: [], mode: PostConditionMode.Deny },
+});
+```
+
 ### `useSignTransaction()`
 
 Sign a serialized transaction without automatically broadcasting it. Useful for sponsored transaction flows where a separate service pays the fee.
 
-> **Note:** OKX wallet does not support raw transaction signing and will throw an error.
+> **Note:** OKX wallet does not support raw transaction signing and will throw an `UnsupportedMethodError`.
 
 ```ts
-const { signTransaction, signTransactionAsync, data, error, isPending } = useSignTransaction();
+const { signTransaction, signTransactionAsync, data, error, isPending, reset } = useSignTransaction();
 
 // Callback style
 signTransaction({ transaction: '0x0100...', broadcast: false }, {
@@ -288,6 +360,8 @@ const { transaction, txid } = await signTransactionAsync({
 
 ### `useBnsName()`
 
+Resolve a BNS v2 primary name for a Stacks address. Returns `null` when no name is registered.
+
 ```ts
 const { bnsName, isLoading } = useBnsName(address);
 // bnsName = 'satoshi.btc' | null
@@ -296,13 +370,93 @@ const { bnsName, isLoading } = useBnsName(address);
 ### Utilities
 
 ```ts
-import { getNetworkFromAddress, getStacksWallets, getLocalStorageWallet } from '@satoshai/kit';
+import {
+  getNetworkFromAddress,
+  getStacksWallets,
+  getLocalStorageWallet,
+  createContractConfig,
+} from '@satoshai/kit';
 
+// Infer network from address prefix
 getNetworkFromAddress('SP...');  // 'mainnet'
 getNetworkFromAddress('ST...');  // 'testnet'
 
+// Detect supported and installed wallets
 const { supported, installed } = getStacksWallets();
+
+// Read persisted wallet session (returns null on server or when empty)
+const session = getLocalStorageWallet();
+// { address: 'SP...', provider: 'xverse' } | null
 ```
+
+## Mutation Hook Return Types
+
+All mutation hooks (`useConnect`, `useSignMessage`, `useWriteContract`, etc.) return the same status shape:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `data` | `T \| undefined` | The successful result. |
+| `error` | `BaseError \| null` | The error, if any. |
+| `status` | `'idle' \| 'pending' \| 'error' \| 'success'` | Current mutation status. |
+| `isIdle` | `boolean` | `true` when no operation has been triggered. |
+| `isPending` | `boolean` | `true` while waiting for wallet response. |
+| `isSuccess` | `boolean` | `true` after a successful operation. |
+| `isError` | `boolean` | `true` after a failed operation. |
+| `reset()` | `() => void` | Reset the mutation state back to idle. |
+
+Each hook also provides both a **callback** variant (fire-and-forget with `onSuccess`/`onError`/`onSettled` callbacks) and an **async** variant that returns a promise.
+
+## Error Handling
+
+All errors thrown by hooks extend `BaseError`. You can catch and narrow them:
+
+```ts
+import {
+  BaseError,
+  WalletNotConnectedError,
+  WalletNotFoundError,
+  UnsupportedMethodError,
+  WalletRequestError,
+} from '@satoshai/kit';
+
+try {
+  await signMessageAsync({ message: 'hello' });
+} catch (err) {
+  if (err instanceof WalletNotConnectedError) {
+    // No wallet connected — prompt user to connect
+  } else if (err instanceof UnsupportedMethodError) {
+    // Wallet doesn't support this method (e.g. OKX + structured signing)
+    console.log(err.method, err.wallet);
+  } else if (err instanceof WalletNotFoundError) {
+    // Wallet extension not installed
+    console.log(err.wallet);
+  } else if (err instanceof WalletRequestError) {
+    // Wallet rejected or failed — original error in cause
+    console.log(err.method, err.wallet, err.cause);
+  } else if (err instanceof BaseError) {
+    // Any other kit error
+    console.log(err.shortMessage);
+    console.log(err.walk()); // root cause
+  }
+}
+```
+
+| Error | When |
+|-------|------|
+| `WalletNotConnectedError` | A mutation hook is called before connecting. |
+| `WalletNotFoundError` | A wallet's browser extension is not installed (e.g. OKX). |
+| `UnsupportedMethodError` | The wallet doesn't support the requested method. |
+| `WalletRequestError` | The wallet rejected or failed the RPC request. |
+
+## WalletConnect Session Management
+
+When using WalletConnect, the kit automatically handles session lifecycle events:
+
+- **Zombie session detection** — On app restore, the relay is pinged (10s timeout). If the wallet on the other end doesn't respond, the session is cleaned up and `onDisconnect` fires.
+- **Wallet-initiated disconnect** — If the wallet disconnects via the relay, state is cleaned up automatically.
+- **Account changes** — Listens for `accountsChanged`, `stx_accountChange` (SIP-030), and `stx_accountsChanged` events. When the connected account changes, `onAddressChange` fires.
+
+No additional setup is needed — these features activate when `wallets` includes `'wallet-connect'` and a session is active.
 
 ## Supported Wallets
 
@@ -328,11 +482,11 @@ All 6 wallets work with both headless (`connect('xverse')`) and modal (`connect(
 | `useWriteContract` | ✓ | ✓ | ✓ | ✓ | ~ | ✓ |
 | `useTransferSTX` | ✓ | ✓ | ✓ | ✓ | ~ | ✓ |
 
-✓ Confirmed supported | ✗ Unsupported (throws error) | ? Unverified | ~ Depends on the connected wallet
+✓ Confirmed supported | ✗ Unsupported (throws `UnsupportedMethodError`) | ? Unverified | ~ Depends on the connected wallet
 
 **Notes:**
 
-- **OKX** uses a proprietary API (`window.okxwallet.stacks`) instead of the standard `@stacks/connect` RPC. `useSignStructuredMessage` and `useSignTransaction` are explicitly unsupported and will throw.
+- **OKX** uses a proprietary API (`window.okxwallet.stacks`) instead of the standard `@stacks/connect` RPC. `useSignStructuredMessage` and `useSignTransaction` are explicitly unsupported and will throw `UnsupportedMethodError`.
 - **Asigna** is a multisig wallet. Transaction-based hooks (`useWriteContract`, `useTransferSTX`) work, but message signing hooks may be limited since there is no multisig message signature standard on Stacks.
 - **Fordefi** supports transactions and contract calls on Stacks, but their [supported blockchains](https://docs.fordefi.com/docs/supported-blockchains) page does not list Stacks under message signing capabilities.
 - **WalletConnect** is a relay protocol — all methods are forwarded, but actual support depends on the wallet on the other end.

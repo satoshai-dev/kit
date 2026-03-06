@@ -64,6 +64,29 @@ const StacksWalletContext = createContext<WalletContextValue | undefined>(
     undefined
 );
 
+/**
+ * React context provider that manages wallet connection state for all `@satoshai/kit` hooks.
+ *
+ * Wrap your app (or the subtree that needs wallet access) with this provider.
+ * All hooks (`useConnect`, `useAddress`, `useWriteContract`, etc.) must be
+ * rendered inside this provider.
+ *
+ * @example
+ * ```tsx
+ * import { StacksWalletProvider } from '@satoshai/kit';
+ *
+ * const wallets = ['xverse', 'leather', 'wallet-connect'] as const;
+ * const wc = { projectId: 'YOUR_PROJECT_ID' };
+ *
+ * function App() {
+ *   return (
+ *     <StacksWalletProvider wallets={[...wallets]} walletConnect={wc}>
+ *       <YourApp />
+ *     </StacksWalletProvider>
+ *   );
+ * }
+ * ```
+ */
 export const StacksWalletProvider = ({
     children,
     wallets,

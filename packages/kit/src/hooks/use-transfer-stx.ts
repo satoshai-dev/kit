@@ -13,20 +13,48 @@ import type { MutationStatus } from '../provider/stacks-wallet-provider.types';
 import { useAddress } from './use-address';
 import { getNetworkFromAddress } from '../utils/get-network-from-address';
 
+/** Variables for {@link useTransferSTX}. */
 export interface TransferSTXVariables {
+    /** Recipient Stacks address (`SP...` or `ST...`). */
     recipient: string;
+    /** Amount in microSTX. Accepts `bigint`, `number`, or numeric `string`. */
     amount: bigint | number | string;
+    /** Optional memo string attached to the transfer. */
     memo?: string;
+    /** Custom fee in microSTX. Omit to let the wallet estimate. */
     fee?: bigint | number | string;
+    /** Custom nonce. Omit to let the wallet manage. */
     nonce?: bigint | number | string;
 }
 
+/** Callback options for the fire-and-forget `transferSTX()` variant. */
 export interface TransferSTXOptions {
     onSuccess?: (txid: string) => void;
     onError?: (error: Error) => void;
     onSettled?: (txid: string | undefined, error: Error | null) => void;
 }
 
+/**
+ * Transfer native STX tokens to a recipient address.
+ *
+ * Returns the broadcast transaction ID on success. Supports all 6 wallets
+ * (OKX uses its proprietary API internally).
+ *
+ * @example
+ * ```ts
+ * const { transferSTXAsync, isPending } = useTransferSTX();
+ *
+ * const txid = await transferSTXAsync({
+ *   recipient: 'SP2...',
+ *   amount: 1_000_000n, // 1 STX
+ *   memo: 'coffee',
+ * });
+ * ```
+ *
+ * @throws {WalletNotConnectedError} If no wallet is connected.
+ * @throws {WalletNotFoundError} If OKX extension is not installed.
+ * @throws {WalletRequestError} If the wallet rejects or fails the request.
+ */
 export const useTransferSTX = () => {
     const { isConnected, address, provider } = useAddress();
     const [data, setData] = useState<string | undefined>(undefined);
