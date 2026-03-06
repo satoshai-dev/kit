@@ -490,7 +490,7 @@ All 6 wallets work with both headless (`connect('xverse')`) and modal (`connect(
 - **Asigna** is a multisig wallet. Transaction-based hooks (`useWriteContract`, `useTransferSTX`) work, but message signing hooks may be limited since there is no multisig message signature standard on Stacks.
 - **Fordefi** supports transactions and contract calls on Stacks, but their [supported blockchains](https://docs.fordefi.com/docs/supported-blockchains) page does not list Stacks under message signing capabilities.
 - **WalletConnect** is a relay protocol — all methods are forwarded, but actual support depends on the wallet on the other end.
-- **Xverse** and **Leather** implement the full [SIP-030](https://github.com/janniks/sips/blob/main/sips/sip-030/sip-030-wallet-interface.md) interface.
+- **Xverse** and **Leather** support all hooks provided by `@satoshai/kit`. Neither fully implements [SIP-030](https://github.com/janniks/sips/blob/main/sips/sip-030/sip-030-wallet-interface.md) — for example, account change detection uses Xverse's proprietary `XverseProviders.StacksProvider.addListener('accountChange')` API, and Leather does not emit account change events at all.
 
 This matrix was compiled from wallet documentation as of March 2026. Sources: [Xverse Sats Connect docs](https://docs.xverse.app/sats-connect/stacks-methods), [Leather developer docs](https://leather.gitbook.io/developers), [Asigna docs](https://asigna.gitbook.io/asigna), [Fordefi docs](https://docs.fordefi.com/docs/supported-blockchains), [@stacks/connect WalletConnect source](https://github.com/stx-labs/connect/tree/main/packages/connect/src/walletconnect).
 
