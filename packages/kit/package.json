@@ -1,6 +1,6 @@
 {
   "name": "@satoshai/kit",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "description": "Typesafe Stacks wallet & contract interaction library for React",
   "license": "MIT",
   "type": "module",
