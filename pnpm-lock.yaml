@@ -92,8 +92,8 @@ importers:
   packages/kit:
     dependencies:
       '@stacks/connect':
-        specifier: 8.2.5
-        version: 8.2.5(@types/react@19.2.14)(lit@3.3.0)(react@19.2.4)(typescript@5.9.3)(zod@3.22.4)
+        specifier: 8.2.6
+        version: 8.2.6(@types/react@19.2.14)(lit@3.3.0)(react@19.2.4)(typescript@5.9.3)(zod@3.22.4)
       bns-v2-sdk:
         specifier: ^2.1.0
         version: 2.1.1
@@ -1252,8 +1252,8 @@ packages:
   '@stacks/connect-ui@8.1.2':
     resolution: {integrity: sha512-C3T1QmEGJocnmsamQnKJvlvHFfjr/FDebLSokrAAwTr6x76JPS5xuACB7u3a7+vVMUdINV+pFvfn442oic2R5w==}
 
-  '@stacks/connect@8.2.5':
-    resolution: {integrity: sha512-pWyxib0sipkOhxITpoPNrocn2aHnGOIY6OBvzZKHjya11t5OTFojjeycEM3k+KrCBE/l6NqkWlU5cepR3FtDSg==}
+  '@stacks/connect@8.2.6':
+    resolution: {integrity: sha512-MXkMVIDPPQLlL83UKb3rNdm7Gh/LQGdPhSsq+sL36KCM6qM1by8+igxX/R/5G+rgn6KdCG+iIRTh4TkAqntrTg==}
 
   '@stacks/network@6.17.0':
     resolution: {integrity: sha512-numHbfKjwco/rbkGPOEz8+FcJ2nBnS/tdJ8R422Q70h3SiA9eqk9RjSzB8p4JP8yW1SZvW+eihADHfMpBuZyfw==}
@@ -4994,7 +4994,7 @@ snapshots:
     dependencies:
       '@stencil/core': 4.43.1
 
-  '@stacks/connect@8.2.5(@types/react@19.2.14)(lit@3.3.0)(react@19.2.4)(typescript@5.9.3)(zod@3.22.4)':
+  '@stacks/connect@8.2.6(@types/react@19.2.14)(lit@3.3.0)(react@19.2.4)(typescript@5.9.3)(zod@3.22.4)':
     dependencies:
       '@reown/appkit': 1.7.17(@types/react@19.2.14)(lit@3.3.0)(react@19.2.4)(typescript@5.9.3)(zod@3.22.4)
       '@reown/appkit-universal-connector': 1.7.17(@types/react@19.2.14)(lit@3.3.0)(react@19.2.4)(typescript@5.9.3)(zod@3.22.4)
