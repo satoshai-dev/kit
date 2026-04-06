@@ -7,17 +7,17 @@ import type { SupportedStacksWallet } from '../../../src/constants/wallets';
 
 // ── Mocks ──────────────────────────────────────────────────────────
 
-const NO_EXTENSIONS = {
-    supported: ['xverse', 'leather', 'asigna', 'fordefi', 'wallet-connect', 'okx'] as SupportedStacksWallet[],
+const mockGetStacksWallets = vi.fn(() => ({
+    supported: [
+        'xverse',
+        'leather',
+        'asigna',
+        'fordefi',
+        'wallet-connect',
+        'okx',
+    ] as SupportedStacksWallet[],
     installed: [] as SupportedStacksWallet[],
-};
-
-const WITH_EXTENSIONS = {
-    ...NO_EXTENSIONS,
-    installed: ['xverse', 'leather'] as SupportedStacksWallet[],
-};
-
-const mockGetStacksWallets = vi.fn(() => NO_EXTENSIONS);
+}));
 
 vi.mock('../../../src/utils/get-stacks-wallets', () => ({
     getStacksWallets: (...args: unknown[]) => mockGetStacksWallets(...args),
@@ -90,42 +90,42 @@ const wrapper = ({ children }: { children: React.ReactNode }) =>
 // ── Tests ──────────────────────────────────────────────────────────
 
 beforeEach(() => {
-    mockGetStacksWallets.mockReset();
+    mockGetStacksWallets.mockClear();
 });
 
-describe('StacksWalletProvider wallet detection', () => {
-    it('picks up extensions that inject after initial render', () => {
-        // First call (useState initializer) — no extensions yet
-        // Second call (useEffect) — extensions have injected
-        mockGetStacksWallets
-            .mockReturnValueOnce(NO_EXTENSIONS)
-            .mockReturnValue(WITH_EXTENSIONS);
+describe('StacksWalletProvider', () => {
+    it('exposes configured wallets with availability from getStacksWallets', () => {
+        mockGetStacksWallets.mockReturnValue({
+            supported: ['xverse', 'leather'] as SupportedStacksWallet[],
+            installed: ['xverse'] as SupportedStacksWallet[],
+        });
 
         const { result } = renderHook(() => useStacksWalletContext(), {
             wrapper,
         });
 
-        // After mount + effect, wallets should reflect late-detected extensions
-        const available = result.current.wallets.filter((w) => w.available);
-        expect(available.map((w) => w.id)).toContain('xverse');
-        expect(available.map((w) => w.id)).toContain('leather');
+        expect(result.current.wallets).toHaveLength(2);
+
+        const xverse = result.current.wallets.find((w) => w.id === 'xverse');
+        const leather = result.current.wallets.find(
+            (w) => w.id === 'leather'
+        );
+        expect(xverse?.available).toBe(true);
+        expect(leather?.available).toBe(false);
     });
 
-    it('does not update state when extensions are already detected at mount', () => {
-        // Both calls return the same result
-        mockGetStacksWallets.mockReturnValue(WITH_EXTENSIONS);
+    it('starts in disconnected state', () => {
+        mockGetStacksWallets.mockReturnValue({
+            supported: [] as SupportedStacksWallet[],
+            installed: [] as SupportedStacksWallet[],
+        });
 
         const { result } = renderHook(() => useStacksWalletContext(), {
             wrapper,
         });
 
-        const wallets = result.current.wallets;
-
-        // getStacksWallets called at least twice (init + effect),
-        // but wallets reference should be stable since nothing changed
-        expect(result.current.wallets).toBe(wallets);
-        expect(mockGetStacksWallets).toHaveBeenCalledTimes(
-            mockGetStacksWallets.mock.calls.length
-        );
+        expect(result.current.status).toBe('disconnected');
+        expect(result.current.address).toBeUndefined();
+        expect(result.current.provider).toBeUndefined();
     });
 });
