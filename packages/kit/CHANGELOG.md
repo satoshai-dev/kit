@@ -1,5 +1,11 @@
 # @satoshai/kit
 
+## 1.0.2
+
+### Patch Changes
+
+- 5cb876e: Fix wallet extension detection timing on React 19 hydration
+
 ## 1.0.1
 
 ### Patch Changes
