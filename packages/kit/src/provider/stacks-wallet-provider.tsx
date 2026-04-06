@@ -449,18 +449,10 @@ export const StacksWalletProvider = ({
         onDisconnect: handleWcDisconnect,
     });
 
-    // Detect installed wallets. Re-checks once after mount to catch extensions
-    // that inject globals after React hydration (common with React 19 + Next.js 16).
-    const [installed, setInstalled] = useState(
-        () => getStacksWallets().installed
-    );
-
-    useEffect(() => {
-        const fresh = getStacksWallets().installed;
-        setInstalled((prev) =>
-            fresh.join(',') === prev.join(',') ? prev : fresh
-        );
-    }, []);
+    // Computed in render body (not memoized) so it picks up wallet extensions
+    // injected after hydration. The context value useMemo below uses
+    // walletInfosKey so the reference stays stable when nothing changes.
+    const { installed } = getStacksWallets();
     const configured = wallets ?? [...SUPPORTED_STACKS_WALLETS];
     const walletInfos = configured.map((w) => ({
         id: w,
