@@ -1,5 +1,11 @@
 # @satoshai/kit
 
+## 1.0.1
+
+### Patch Changes
+
+- e393787: Update @stacks/connect from 8.2.5 to 8.2.6
+
 ## 1.0.0
 
 ### Major Changes
