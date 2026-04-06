@@ -1,5 +1,11 @@
 # @satoshai/kit
 
+## 1.0.3
+
+### Patch Changes
+
+- 752d7b9: Move wallet extension detection into useWallets hook for reliable availability
+
 ## 1.0.2
 
 ### Patch Changes
