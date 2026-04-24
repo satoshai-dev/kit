@@ -50,7 +50,7 @@ import type {
  * await fetch('/api/sponsor', { method: 'POST', body: signedTx });
  *
  * // Typed mode (with ABI — enables autocomplete)
- * const signedTx = await sponsoredContractCallAsync({
+ * const typedSignedTx = await sponsoredContractCallAsync({
  *   abi: myContractAbi,
  *   address: 'SP...',
  *   contract: 'my-contract',
