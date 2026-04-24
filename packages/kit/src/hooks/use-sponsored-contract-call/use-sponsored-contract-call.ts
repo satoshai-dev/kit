@@ -7,7 +7,7 @@ import { useCallback, useMemo, useState } from 'react';
 import {
     BaseError,
     WalletNotConnectedError,
-    WalletNotFoundError,
+    UnsupportedMethodError,
     WalletRequestError,
 } from '../../errors';
 import type { MutationStatus } from '../../provider/stacks-wallet-provider.types';
@@ -17,68 +17,71 @@ import { getNetworkFromAddress } from '../../utils/get-network-from-address';
 import {
     resolveArgs,
     type ContractCallVariablesInternal,
-} from './contract-call.shared';
-import {
-    preparePostConditionsForOKX,
-    prepareArgsForOKX,
-} from './use-write-contract.helpers';
+} from '../use-write-contract/contract-call.shared';
 import type {
-    WriteContractOptions,
-    WriteContractAsyncFn,
-    WriteContractFn,
-} from './use-write-contract.types';
+    SponsoredContractCallOptions,
+    SponsoredContractCallAsyncFn,
+    SponsoredContractCallFn,
+} from './use-sponsored-contract-call.types';
 
 /**
- * Call a public function on a Clarity smart contract.
+ * Sign a sponsored contract call without broadcasting.
  *
- * Supports two modes:
- * - **Typed** (with ABI) — pass an ABI object for autocomplete on `functionName` and `args`.
- * - **Untyped** — pass `ClarityValue[]` directly as `args`.
+ * The wallet signs the origin portion with `AuthType.Sponsored` (fee = 0)
+ * and returns the signed transaction hex. The consumer sends this to a
+ * sponsor service for co-signing and broadcast.
  *
  * @example
  * ```ts
- * import { Pc, PostConditionMode } from '@stacks/transactions';
+ * import { PostConditionMode } from '@stacks/transactions';
  *
- * const { writeContractAsync } = useWriteContract();
+ * const { sponsoredContractCallAsync } = useSponsoredContractCall();
  *
  * // Untyped mode
- * const txid = await writeContractAsync({
+ * const signedTx = await sponsoredContractCallAsync({
  *   address: 'SP...',
  *   contract: 'my-contract',
- *   functionName: 'transfer',
+ *   functionName: 'deposit',
  *   args: [uintCV(100)],
- *   pc: {
- *     postConditions: [Pc.principal('SP...').willSendLte(100n).ustx()],
- *     mode: PostConditionMode.Deny,
- *   },
+ *   pc: { postConditions: [], mode: PostConditionMode.Deny },
  * });
  *
+ * // Send to sponsor service
+ * await fetch('/api/sponsor', { method: 'POST', body: signedTx });
+ *
  * // Typed mode (with ABI — enables autocomplete)
- * const txid = await writeContractAsync({
+ * const signedTx = await sponsoredContractCallAsync({
  *   abi: myContractAbi,
  *   address: 'SP...',
  *   contract: 'my-contract',
- *   functionName: 'transfer', // autocompleted from ABI
- *   args: { amount: 100n },   // named args, type-checked
+ *   functionName: 'deposit',
+ *   args: { amount: 100n },
  *   pc: { postConditions: [], mode: PostConditionMode.Deny },
  * });
  * ```
  *
  * @throws {WalletNotConnectedError} If no wallet is connected.
- * @throws {WalletNotFoundError} If OKX extension is not installed.
+ * @throws {UnsupportedMethodError} If the wallet does not support sponsored calls (OKX).
  * @throws {WalletRequestError} If the wallet rejects or fails the request.
  */
-export const useWriteContract = () => {
+export const useSponsoredContractCall = () => {
     const { isConnected, address, provider } = useAddress();
 
     const [data, setData] = useState<string | undefined>(undefined);
     const [error, setError] = useState<BaseError | null>(null);
     const [status, setStatus] = useState<MutationStatus>('idle');
 
-    const writeContractAsync = useCallback(
+    const sponsoredContractCallAsync = useCallback(
         async (variables: ContractCallVariablesInternal): Promise<string> => {
             if (!isConnected || !address) {
                 throw new WalletNotConnectedError();
+            }
+
+            if (provider === 'okx') {
+                throw new UnsupportedMethodError({
+                    method: 'stx_callContract (sponsored)',
+                    wallet: 'OKX',
+                });
             }
 
             setStatus('pending');
@@ -88,31 +91,6 @@ export const useWriteContract = () => {
             const resolvedArgs = resolveArgs(variables);
 
             try {
-                if (provider === 'okx') {
-                    if (!window.okxwallet) {
-                        throw new WalletNotFoundError({ wallet: 'OKX' });
-                    }
-
-                    const response =
-                        await window.okxwallet.stacks.signTransaction({
-                            contractAddress: variables.address,
-                            contractName: variables.contract,
-                            functionName: variables.functionName,
-                            functionArgs: prepareArgsForOKX(resolvedArgs),
-                            postConditions: preparePostConditionsForOKX(
-                                variables.pc.postConditions
-                            ),
-                            postConditionMode: variables.pc.mode,
-                            stxAddress: address,
-                            txType: 'contract_call',
-                            anchorMode: 3,
-                        });
-
-                    setData(response.txHash);
-                    setStatus('success');
-                    return response.txHash;
-                }
-
                 const response = await request('stx_callContract', {
                     address,
                     contract: `${variables.address}.${variables.contract}`,
@@ -124,15 +102,18 @@ export const useWriteContract = () => {
                             ? 'allow'
                             : 'deny',
                     network: getNetworkFromAddress(address),
+                    sponsored: true,
+                    fee: '0',
                 });
 
-                if (!response.txid) {
-                    throw new Error('No transaction ID returned');
+                const signedTx = response.transaction;
+                if (!signedTx) {
+                    throw new Error('No signed transaction returned');
                 }
 
-                setData(response.txid);
+                setData(signedTx);
                 setStatus('success');
-                return response.txid;
+                return signedTx;
             } catch (err) {
                 const error = err instanceof BaseError
                     ? err
@@ -147,11 +128,11 @@ export const useWriteContract = () => {
             }
         },
         [isConnected, address, provider]
-    ) as unknown as WriteContractAsyncFn;
+    ) as unknown as SponsoredContractCallAsyncFn;
 
-    const writeContract = useCallback(
-        (variables: ContractCallVariablesInternal, options?: WriteContractOptions) => {
-            (writeContractAsync as unknown as (v: ContractCallVariablesInternal) => Promise<string>)(variables)
+    const sponsoredContractCall = useCallback(
+        (variables: ContractCallVariablesInternal, options?: SponsoredContractCallOptions) => {
+            (sponsoredContractCallAsync as unknown as (v: ContractCallVariablesInternal) => Promise<string>)(variables)
                 .then((data) => {
                     options?.onSuccess?.(data);
                     options?.onSettled?.(data, null);
@@ -161,8 +142,8 @@ export const useWriteContract = () => {
                     options?.onSettled?.(undefined, error);
                 });
         },
-        [writeContractAsync]
-    ) as unknown as WriteContractFn;
+        [sponsoredContractCallAsync]
+    ) as unknown as SponsoredContractCallFn;
 
     const reset = useCallback(() => {
         setData(undefined);
@@ -172,8 +153,8 @@ export const useWriteContract = () => {
 
     return useMemo(
         () => ({
-            writeContract,
-            writeContractAsync,
+            sponsoredContractCall,
+            sponsoredContractCallAsync,
             reset,
             data,
             error,
@@ -183,16 +164,15 @@ export const useWriteContract = () => {
             isSuccess: status === 'success',
             status,
         }),
-        [writeContract, writeContractAsync, reset, data, error, status]
+        [sponsoredContractCall, sponsoredContractCallAsync, reset, data, error, status]
     );
 };
 
 export type {
-    WriteContractVariables,
-    WriteContractOptions,
-    PostConditionConfig,
-    TypedWriteContractVariables,
-    UntypedWriteContractVariables,
-    WriteContractAsyncFn,
-    WriteContractFn,
-} from './use-write-contract.types';
+    SponsoredContractCallVariables,
+    SponsoredContractCallOptions,
+    TypedSponsoredContractCallVariables,
+    UntypedSponsoredContractCallVariables,
+    SponsoredContractCallAsyncFn,
+    SponsoredContractCallFn,
+} from './use-sponsored-contract-call.types';
