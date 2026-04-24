@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { renderHook, act } from '@testing-library/react';
+import { renderHook } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 
 vi.mock('@stacks/connect', () => ({
