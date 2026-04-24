@@ -32,12 +32,6 @@ export {
     type SignStructuredMessageOptions,
 } from './hooks/use-sign-structured-message';
 export {
-    useSignTransaction,
-    type SignTransactionVariables,
-    type SignTransactionData,
-    type SignTransactionOptions,
-} from './hooks/use-sign-transaction';
-export {
     useTransferSTX,
     type TransferSTXVariables,
     type TransferSTXOptions,
@@ -50,6 +44,13 @@ export {
     type TypedWriteContractVariables,
     type UntypedWriteContractVariables,
 } from './hooks/use-write-contract/use-write-contract';
+export {
+    useSponsoredContractCall,
+    type SponsoredContractCallVariables,
+    type SponsoredContractCallOptions,
+    type TypedSponsoredContractCallVariables,
+    type UntypedSponsoredContractCallVariables,
+} from './hooks/use-sponsored-contract-call/use-sponsored-contract-call';
 export { useBnsName } from './hooks/use-bns-name';
 export { useWallets } from './hooks/use-wallets';
 
