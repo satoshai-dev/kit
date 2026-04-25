@@ -1,7 +1,10 @@
 'use client';
 
 import { request } from '@stacks/connect';
-import { PostConditionMode } from '@stacks/transactions';
+import {
+    makeUnsignedContractCall,
+    serializeTransaction,
+} from '@stacks/transactions';
 import { useCallback, useMemo, useState } from 'react';
 
 import {
@@ -65,7 +68,7 @@ import type {
  * @throws {WalletRequestError} If the wallet rejects or fails the request.
  */
 export const useSponsoredContractCall = () => {
-    const { isConnected, address, provider } = useAddress();
+    const { isConnected, address, publicKey, provider } = useAddress();
 
     const [data, setData] = useState<string | undefined>(undefined);
     const [error, setError] = useState<BaseError | null>(null);
@@ -84,6 +87,12 @@ export const useSponsoredContractCall = () => {
                 });
             }
 
+            if (!publicKey) {
+                throw new BaseError(
+                    'Public key not available — cannot build sponsored transaction'
+                );
+            }
+
             setStatus('pending');
             setError(null);
             setData(undefined);
@@ -91,22 +100,25 @@ export const useSponsoredContractCall = () => {
             const resolvedArgs = resolveArgs(variables);
 
             try {
-                const response = await request('stx_callContract', {
-                    address,
-                    contract: `${variables.address}.${variables.contract}`,
+                const unsignedTx = await makeUnsignedContractCall({
+                    contractAddress: variables.address,
+                    contractName: variables.contract,
                     functionName: variables.functionName,
                     functionArgs: resolvedArgs,
-                    postConditions: variables.pc.postConditions,
-                    postConditionMode:
-                        variables.pc.mode === PostConditionMode.Allow
-                            ? 'allow'
-                            : 'deny',
-                    network: getNetworkFromAddress(address),
+                    publicKey,
                     sponsored: true,
-                    fee: '0',
+                    fee: 0,
+                    postConditions: variables.pc.postConditions,
+                    postConditionMode: variables.pc.mode,
+                    network: getNetworkFromAddress(address),
                 });
 
-                const signedTx = response.transaction;
+                const result = await request('stx_signTransaction', {
+                    transaction: serializeTransaction(unsignedTx),
+                    broadcast: false,
+                });
+
+                const signedTx = result.transaction;
                 if (!signedTx) {
                     throw new Error('No signed transaction returned');
                 }
@@ -118,7 +130,7 @@ export const useSponsoredContractCall = () => {
                 const error = err instanceof BaseError
                     ? err
                     : new WalletRequestError({
-                          method: 'stx_callContract',
+                          method: 'stx_signTransaction',
                           wallet: provider ?? 'unknown',
                           cause: err instanceof Error ? err : new Error(String(err)),
                       });
@@ -127,7 +139,7 @@ export const useSponsoredContractCall = () => {
                 throw error;
             }
         },
-        [isConnected, address, provider]
+        [isConnected, address, publicKey, provider]
     ) as unknown as SponsoredContractCallAsyncFn;
 
     const sponsoredContractCall = useCallback(

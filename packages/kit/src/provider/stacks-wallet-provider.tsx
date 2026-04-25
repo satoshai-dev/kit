@@ -97,6 +97,7 @@ export const StacksWalletProvider = ({
     onDisconnect,
 }: StacksWalletProviderProps) => {
     const [address, setAddress] = useState<string | undefined>();
+    const [publicKey, setPublicKey] = useState<string | undefined>();
     const [provider, setProvider] = useState<
         SupportedStacksWallet | undefined
     >();
@@ -154,6 +155,7 @@ export const StacksWalletProvider = ({
                 if (persisted.provider === 'okx') {
                     const data = await getOKXStacksAddress();
                     setAddress(data.address);
+                    setPublicKey(data.publicKey);
                     setProvider(data.provider);
                     return;
                 }
@@ -175,6 +177,7 @@ export const StacksWalletProvider = ({
                 }
 
                 setAddress(persisted.address);
+                setPublicKey(persisted.publicKey);
                 setProvider(persisted.provider);
                 setSelectedProviderId(
                     STACKS_TO_STACKS_CONNECT_PROVIDERS[persisted.provider]
@@ -246,14 +249,15 @@ export const StacksWalletProvider = ({
                         );
                     }
 
-                    const extractedAddress = extractStacksAddress(
+                    const extracted = extractStacksAddress(
                         resolvedProvider,
                         data.addresses
                     );
 
-                    setAddress(extractedAddress);
+                    setAddress(extracted.address);
+                    setPublicKey(extracted.publicKey);
                     setProvider(resolvedProvider);
-                    options?.onSuccess?.(extractedAddress, resolvedProvider);
+                    options?.onSuccess?.(extracted.address, resolvedProvider);
                 } catch (error) {
                     if (connectGenRef.current !== gen) return;
                     console.error('Failed to connect wallet:', error);
@@ -314,6 +318,7 @@ export const StacksWalletProvider = ({
                     const data = await getOKXStacksAddress();
                     if (connectGenRef.current !== gen) return;
                     setAddress(data.address);
+                    setPublicKey(data.publicKey);
                     setProvider(data.provider);
                     options?.onSuccess?.(data.address, data.provider);
                     return;
@@ -354,14 +359,15 @@ export const StacksWalletProvider = ({
 
                 if (connectGenRef.current !== gen) return;
 
-                const extractedAddress = extractStacksAddress(
+                const extracted = extractStacksAddress(
                     typedProvider,
                     data.addresses
                 );
 
-                setAddress(extractedAddress);
+                setAddress(extracted.address);
+                setPublicKey(extracted.publicKey);
                 setProvider(typedProvider);
-                options?.onSuccess?.(extractedAddress, typedProvider);
+                options?.onSuccess?.(extracted.address, typedProvider);
             } catch (error) {
                 if (connectGenRef.current !== gen) return;
                 console.error('Failed to connect wallet:', error);
@@ -392,6 +398,7 @@ export const StacksWalletProvider = ({
         (callback?: () => void) => {
             localStorage.removeItem(LOCAL_STORAGE_STACKS);
             setAddress(undefined);
+            setPublicKey(undefined);
             setProvider(undefined);
             getSelectedProvider()?.disconnect?.();
             clearSelectedProviderId();
@@ -406,9 +413,9 @@ export const StacksWalletProvider = ({
 
         localStorage.setItem(
             LOCAL_STORAGE_STACKS,
-            JSON.stringify({ address, provider })
+            JSON.stringify({ address, publicKey, provider })
         );
-    }, [address, provider]);
+    }, [address, publicKey, provider]);
 
     useEffect(() => {
         const isConnected = !!address && !!provider;
@@ -438,6 +445,7 @@ export const StacksWalletProvider = ({
     const handleWcDisconnect = useCallback(() => {
         localStorage.removeItem(LOCAL_STORAGE_STACKS);
         setAddress(undefined);
+        setPublicKey(undefined);
         setProvider(undefined);
         onDisconnect?.();
     }, [onDisconnect]);
@@ -472,12 +480,13 @@ export const StacksWalletProvider = ({
 
     const value = useMemo((): WalletContextValue => {
         const walletState: WalletState = isConnecting
-            ? { status: 'connecting', address: undefined, provider: undefined }
+            ? { status: 'connecting', address: undefined, publicKey: undefined, provider: undefined }
             : address && provider
-            ? { status: 'connected', address, provider }
+            ? { status: 'connected', address, publicKey, provider }
             : {
                   status: 'disconnected',
                   address: undefined,
+                  publicKey: undefined,
                   provider: undefined,
               };
 
@@ -488,7 +497,7 @@ export const StacksWalletProvider = ({
             reset,
             wallets: walletInfos,
         };
-    }, [address, provider, isConnecting, connect, disconnect, reset, walletInfosKey]);
+    }, [address, publicKey, provider, isConnecting, connect, disconnect, reset, walletInfosKey]);
 
     return (
         <StacksWalletContext.Provider value={value}>

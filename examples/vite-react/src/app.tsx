@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { PostConditionMode, makeUnsignedSTXTokenTransfer, AnchorMode, tupleCV, stringAsciiCV, uintCV } from '@stacks/transactions';
+import { PostConditionMode, tupleCV, stringAsciiCV, uintCV } from '@stacks/transactions';
 import {
     StacksWalletProvider,
     useAddress,
@@ -9,7 +9,7 @@ import {
     useWallets,
     useWriteContract,
     useTransferSTX,
-    useSignTransaction,
+    useSponsoredContractCall,
     createContractConfig,
     useSignStructuredMessage,
 } from '@satoshai/kit';
@@ -76,7 +76,7 @@ export const App = () => {
 
 const Wallet = ({ useModal }: { useModal: boolean }) => {
     const { connect, reset, isPending } = useConnect();
-    const { address, isConnected, provider } = useAddress();
+    const { address, publicKey, isConnected, provider } = useAddress();
     const { disconnect } = useDisconnect();
     const { bnsName, isLoading: isBnsLoading } = useBnsName(address);
     const { wallets } = useWallets();
@@ -95,6 +95,10 @@ const Wallet = ({ useModal }: { useModal: boolean }) => {
                 <p>
                     <strong>Address:</strong> {address}
                 </p>
+                <p>
+                    <strong>Public Key:</strong>{' '}
+                    {publicKey ? <code>{publicKey}</code> : <em>not available</em>}
+                </p>
                 {isBnsLoading ? (
                     <p>Loading BNS name...</p>
                 ) : bnsName ? (
@@ -105,7 +109,7 @@ const Wallet = ({ useModal }: { useModal: boolean }) => {
                 <TransferSTXDemo />
                 <SignStructuredMessageDemo />
                 <WriteContractDemo address={address} />
-                <SignTransactionDemo address={address} />
+                <SponsoredContractCallDemo />
                 <button onClick={() => disconnect()}>Disconnect</button>
             </div>
         );
@@ -262,54 +266,47 @@ const SignStructuredMessageDemo = () => {
     );
 };
 
-// Demonstrates useSignTransaction hook
-const SignTransactionDemo = ({ address }: { address: string }) => {
-    const [broadcast, setBroadcast] = useState(false);
-    const { signTransaction, isPending, isSuccess, isError, data, error, reset } = useSignTransaction();
+// Demonstrates useSponsoredContractCall hook
+const SponsoredContractCallDemo = () => {
+    const { sponsoredContractCall, isPending, isSuccess, isError, data, error, reset } =
+        useSponsoredContractCall();
 
-    const handleSign = async () => {
-        const tx = await makeUnsignedSTXTokenTransfer({
-            recipient: 'SP000000000000000000002Q6VF78',
-            amount: 1000000n,
-            anchorMode: AnchorMode.Any,
-            fee: 200n,
-            nonce: 0n,
-            publicKey: '039e3c97ada3bc88a3e584e3f9472e0fab1300e8a78e1494d8bb1804bc3e6a2fa5',
-        });
-
-        signTransaction(
-            { transaction: tx.serialize(), broadcast },
+    const handleSponsoredCall = () => {
+        sponsoredContractCall(
             {
-                onSuccess: (result) => console.log('Transaction signed:', result),
-                onError: (err) => console.error('Transaction signing failed:', err),
+                ...myToken,
+                functionName: 'transfer',
+                args: {
+                    amount: 1000000n,
+                    sender: 'SP102V8P0F7JX67ARQ77WEA3D3CFB5XW39REDT0AM',
+                    recipient: 'SP000000000000000000002Q6VF78',
+                    memo: null,
+                },
+                pc: {
+                    postConditions: [],
+                    mode: PostConditionMode.Allow,
+                },
+            },
+            {
+                onSuccess: (signedTx) => console.log('Sponsored TX signed:', signedTx),
+                onError: (err) => console.error('Sponsored TX failed:', err),
             }
         );
     };
 
     return (
         <div style={{ marginTop: '1rem', marginBottom: '1rem' }}>
-            <h3>Sign Transaction</h3>
+            <h3>Sponsored Contract Call</h3>
             <p style={{ fontSize: '0.85rem', color: '#666' }}>
-                Signs an unsigned STX transfer of 1 STX to the burn address.
+                Signs a sponsored contract call (fee = 0). Returns signed TX hex — you would
+                send this to a sponsor service for co-signing and broadcast.
             </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxWidth: '400px' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <input
-                        type="checkbox"
-                        checked={broadcast}
-                        onChange={(e) => setBroadcast(e.target.checked)}
-                        disabled={isPending}
-                    />
-                    Broadcast after signing
-                </label>
-                <button onClick={handleSign} disabled={isPending}>
-                    {isPending ? 'Signing...' : 'Sign Transaction'}
-                </button>
-            </div>
+            <button onClick={handleSponsoredCall} disabled={isPending}>
+                {isPending ? 'Signing...' : 'Sign Sponsored Call'}
+            </button>
             {isSuccess && data && (
                 <div style={{ color: 'green' }}>
-                    <p>Signed TX: {data.transaction.slice(0, 40)}...</p>
-                    {data.txid && <p>TXID: {data.txid}</p>}
+                    <p>Signed TX: {data.slice(0, 60)}...</p>
                     <button onClick={reset}>Clear</button>
                 </div>
             )}

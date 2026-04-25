@@ -9,10 +9,24 @@ vi.mock('@stacks/connect', () => ({
     request: mockRequest,
 }));
 
+const mockMakeUnsignedContractCall = vi.fn();
+const mockSerializeTransaction = vi.fn();
+vi.mock('@stacks/transactions', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('@stacks/transactions')>();
+    return {
+        ...actual,
+        makeUnsignedContractCall: (...args: unknown[]) =>
+            mockMakeUnsignedContractCall(...args),
+        serializeTransaction: (...args: unknown[]) =>
+            mockSerializeTransaction(...args),
+    };
+});
+
 vi.mock('../../../src/hooks/use-address', () => ({
     useAddress: () => ({
         isConnected: true,
         address: 'SP102V8P0F7JX67ARQ77WEA3D3CFB5XW39REDT0AM',
+        publicKey: '03abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab',
         provider: 'leather',
     }),
 }));
@@ -58,8 +72,16 @@ const baseVariables = {
     pc: { postConditions: [postCondition], mode: PostConditionMode.Deny },
 };
 
+const FAKE_UNSIGNED_TX = { fake: 'unsigned-tx' };
+const FAKE_SERIALIZED = '0x00serialized';
+
 beforeEach(() => {
     mockRequest.mockReset();
+    mockMakeUnsignedContractCall.mockReset();
+    mockSerializeTransaction.mockReset();
+
+    mockMakeUnsignedContractCall.mockResolvedValue(FAKE_UNSIGNED_TX);
+    mockSerializeTransaction.mockReturnValue(FAKE_SERIALIZED);
 });
 
 describe('useSponsoredContractCall', () => {
@@ -90,7 +112,7 @@ describe('useSponsoredContractCall', () => {
         expect(result.current.error).toBeNull();
     });
 
-    it('formats contract as address.contract', async () => {
+    it('builds unsigned tx with makeUnsignedContractCall and signs via stx_signTransaction', async () => {
         mockRequest.mockResolvedValue({ transaction: '0x0200signed' });
 
         const { result } = renderHook(() => useSponsoredContractCall());
@@ -99,82 +121,39 @@ describe('useSponsoredContractCall', () => {
             await result.current.sponsoredContractCallAsync(baseVariables);
         });
 
-        expect(mockRequest).toHaveBeenCalledWith(
-            'stx_callContract',
+        expect(mockMakeUnsignedContractCall).toHaveBeenCalledWith(
             expect.objectContaining({
-                contract: 'SP102V8P0F7JX67ARQ77WEA3D3CFB5XW39REDT0AM.my-contract',
-            })
-        );
-    });
-
-    it('passes sponsored: true and fee: "0" in request', async () => {
-        mockRequest.mockResolvedValue({ transaction: '0x0200signed' });
-
-        const { result } = renderHook(() => useSponsoredContractCall());
-
-        await act(async () => {
-            await result.current.sponsoredContractCallAsync(baseVariables);
-        });
-
-        expect(mockRequest).toHaveBeenCalledWith(
-            'stx_callContract',
-            expect.objectContaining({
+                contractAddress: 'SP102V8P0F7JX67ARQ77WEA3D3CFB5XW39REDT0AM',
+                contractName: 'my-contract',
+                functionName: 'deposit',
+                publicKey: '03abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab',
                 sponsored: true,
-                fee: '0',
-            })
-        );
-    });
-
-    it('maps PostConditionMode.Allow to allow string', async () => {
-        mockRequest.mockResolvedValue({ transaction: '0x0200signed' });
-
-        const { result } = renderHook(() => useSponsoredContractCall());
-
-        await act(async () => {
-            await result.current.sponsoredContractCallAsync({
-                ...baseVariables,
-                pc: { postConditions: [], mode: PostConditionMode.Allow },
-            });
-        });
-
-        expect(mockRequest).toHaveBeenCalledWith(
-            'stx_callContract',
-            expect.objectContaining({
-                postConditionMode: 'allow',
-            })
-        );
-    });
-
-    it('maps PostConditionMode.Deny to deny string', async () => {
-        mockRequest.mockResolvedValue({ transaction: '0x0200signed' });
-
-        const { result } = renderHook(() => useSponsoredContractCall());
-
-        await act(async () => {
-            await result.current.sponsoredContractCallAsync(baseVariables);
-        });
-
-        expect(mockRequest).toHaveBeenCalledWith(
-            'stx_callContract',
-            expect.objectContaining({
-                postConditionMode: 'deny',
-            })
-        );
-    });
-
-    it('passes network from getNetworkFromAddress', async () => {
-        mockRequest.mockResolvedValue({ transaction: '0x0200signed' });
-
-        const { result } = renderHook(() => useSponsoredContractCall());
-
-        await act(async () => {
-            await result.current.sponsoredContractCallAsync(baseVariables);
-        });
-
-        expect(mockRequest).toHaveBeenCalledWith(
-            'stx_callContract',
-            expect.objectContaining({
+                fee: 0,
                 network: 'mainnet',
+            })
+        );
+
+        expect(mockSerializeTransaction).toHaveBeenCalledWith(FAKE_UNSIGNED_TX);
+
+        expect(mockRequest).toHaveBeenCalledWith('stx_signTransaction', {
+            transaction: FAKE_SERIALIZED,
+            broadcast: false,
+        });
+    });
+
+    it('passes post conditions to makeUnsignedContractCall', async () => {
+        mockRequest.mockResolvedValue({ transaction: '0x0200signed' });
+
+        const { result } = renderHook(() => useSponsoredContractCall());
+
+        await act(async () => {
+            await result.current.sponsoredContractCallAsync(baseVariables);
+        });
+
+        expect(mockMakeUnsignedContractCall).toHaveBeenCalledWith(
+            expect.objectContaining({
+                postConditions: [postCondition],
+                postConditionMode: PostConditionMode.Deny,
             })
         );
     });
@@ -298,7 +277,7 @@ describe('useSponsoredContractCall', () => {
 });
 
 describe('useSponsoredContractCall – typed mode (with ABI)', () => {
-    it('converts named args to ClarityValues and calls request with sponsored params', async () => {
+    it('converts named args to ClarityValues and builds sponsored tx', async () => {
         mockRequest.mockResolvedValue({ transaction: '0x0200signed' });
 
         const { result } = renderHook(() => useSponsoredContractCall());
@@ -321,20 +300,19 @@ describe('useSponsoredContractCall – typed mode (with ABI)', () => {
         expect(signedTx).toBe('0x0200signed');
         expect(result.current.isSuccess).toBe(true);
 
-        expect(mockRequest).toHaveBeenCalledWith('stx_callContract', {
-            address: 'SP102V8P0F7JX67ARQ77WEA3D3CFB5XW39REDT0AM',
-            contract: 'SP102V8P0F7JX67ARQ77WEA3D3CFB5XW39REDT0AM.my-vault',
-            functionName: 'deposit',
-            functionArgs: [
-                uintCV(1000000n),
-                standardPrincipalCV('SP000000000000000000002Q6VF78'),
-            ],
-            postConditions: baseVariables.pc.postConditions,
-            postConditionMode: 'deny',
-            network: 'mainnet',
-            sponsored: true,
-            fee: '0',
-        });
+        expect(mockMakeUnsignedContractCall).toHaveBeenCalledWith(
+            expect.objectContaining({
+                contractAddress: 'SP102V8P0F7JX67ARQ77WEA3D3CFB5XW39REDT0AM',
+                contractName: 'my-vault',
+                functionName: 'deposit',
+                functionArgs: [
+                    uintCV(1000000n),
+                    standardPrincipalCV('SP000000000000000000002Q6VF78'),
+                ],
+                sponsored: true,
+                fee: 0,
+            })
+        );
     });
 
     it('throws when function is not found in ABI', async () => {
@@ -358,7 +336,7 @@ describe('useSponsoredContractCall – typed mode (with ABI)', () => {
 });
 
 describe('useSponsoredContractCall – untyped mode', () => {
-    it('passes ClarityValue[] args directly to request', async () => {
+    it('passes ClarityValue[] args directly to makeUnsignedContractCall', async () => {
         mockRequest.mockResolvedValue({ transaction: '0x0200signed' });
 
         const { result } = renderHook(() => useSponsoredContractCall());
@@ -382,16 +360,18 @@ describe('useSponsoredContractCall – untyped mode', () => {
         expect(signedTx).toBe('0x0200signed');
         expect(result.current.isSuccess).toBe(true);
 
-        expect(mockRequest).toHaveBeenCalledWith('stx_callContract', {
-            address: 'SP102V8P0F7JX67ARQ77WEA3D3CFB5XW39REDT0AM',
-            contract: 'SP102V8P0F7JX67ARQ77WEA3D3CFB5XW39REDT0AM.my-vault',
-            functionName: 'deposit',
-            functionArgs: args,
-            postConditions: baseVariables.pc.postConditions,
-            postConditionMode: 'deny',
-            network: 'mainnet',
-            sponsored: true,
-            fee: '0',
+        expect(mockMakeUnsignedContractCall).toHaveBeenCalledWith(
+            expect.objectContaining({
+                contractAddress: 'SP102V8P0F7JX67ARQ77WEA3D3CFB5XW39REDT0AM',
+                contractName: 'my-vault',
+                functionName: 'deposit',
+                functionArgs: args,
+            })
+        );
+
+        expect(mockRequest).toHaveBeenCalledWith('stx_signTransaction', {
+            transaction: FAKE_SERIALIZED,
+            broadcast: false,
         });
     });
 });

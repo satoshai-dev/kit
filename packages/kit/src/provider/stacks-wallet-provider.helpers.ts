@@ -56,6 +56,7 @@ export const getOKXStacksAddress = async () => {
 
     return {
         address: stacksResponse.address,
+        publicKey: stacksResponse.publicKey,
         provider: 'okx' as const,
     };
 };
@@ -111,29 +112,26 @@ export const unregisterOkxProvider = () => {
 
 export const extractStacksAddress = (
     typedProvider: SupportedStacksWallet,
-    addresses: { address?: string; symbol?: string }[]
-) => {
+    addresses: { address?: string; symbol?: string; publicKey?: string }[]
+): { address: string; publicKey?: string } => {
     if (!addresses.length) {
         throw new Error(`No addresses provided for ${typedProvider} wallet`);
     }
 
     if (typedProvider === 'leather' || typedProvider === 'asigna') {
-        const stxAddress = addresses.find(
-            (addr) => addr.symbol === 'STX'
-        )?.address;
+        const entry = addresses.find((addr) => addr.symbol === 'STX');
 
-        if (stxAddress) return stxAddress;
+        if (entry?.address) return { address: entry.address, publicKey: entry.publicKey };
     }
 
-    const stacksAddress = addresses.find((addr) =>
-        addr.address?.startsWith('S')
-    )?.address;
+    const entry = addresses.find((addr) => addr.address?.startsWith('S'));
 
-    if (stacksAddress) return stacksAddress;
+    if (entry?.address) return { address: entry.address, publicKey: entry.publicKey };
 
-    const legacyAddress = addresses[2]?.address;
+    const legacyEntry = addresses[2];
 
-    if (legacyAddress?.startsWith('S')) return legacyAddress;
+    if (legacyEntry?.address?.startsWith('S'))
+        return { address: legacyEntry.address, publicKey: legacyEntry.publicKey };
 
     throw new Error(
         `No valid Stacks address found for ${typedProvider} wallet`

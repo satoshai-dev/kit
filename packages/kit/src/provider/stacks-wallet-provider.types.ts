@@ -66,16 +66,19 @@ export type WalletState =
     | {
           status: 'disconnected';
           address: undefined;
+          publicKey: undefined;
           provider: undefined;
       }
     | {
           status: 'connecting';
           address: undefined;
+          publicKey: undefined;
           provider: undefined;
       }
     | {
           status: 'connected';
           address: string;
+          publicKey: string | undefined;
           provider: SupportedStacksWallet;
       };
 
