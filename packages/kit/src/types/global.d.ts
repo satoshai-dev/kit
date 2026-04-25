@@ -18,7 +18,7 @@ declare global {
                     recipient?: string;
                     amount?: string;
                     memo?: string;
-                }) => Promise<{ txHash: string }>;
+                }) => Promise<{ txHash: string; signature: string }>;
                 signMessage: (data: {
                     message: string;
                 }) => Promise<{ publicKey: string; signature: string }>;
