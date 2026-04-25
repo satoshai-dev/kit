@@ -2,7 +2,7 @@ declare global {
     interface Window {
         okxwallet?: {
             stacks: {
-                connect: () => Promise<{ address: string }>;
+                connect: () => Promise<{ address: string; publicKey?: string }>;
                 signTransaction: (params: {
                     stxAddress: string;
                     txType: string;

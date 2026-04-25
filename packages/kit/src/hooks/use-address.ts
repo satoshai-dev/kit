@@ -8,6 +8,7 @@ import { useStacksWalletContext } from '../provider/stacks-wallet-provider';
 type UseAddressReturn =
     | {
           address: undefined;
+          publicKey: undefined;
           isConnected: false;
           isConnecting: boolean;
           isDisconnected: boolean;
@@ -15,6 +16,7 @@ type UseAddressReturn =
       }
     | {
           address: string;
+          publicKey: string | undefined;
           isConnected: true;
           isConnecting: false;
           isDisconnected: false;
@@ -38,12 +40,13 @@ type UseAddressReturn =
  * ```
  */
 export const useAddress = (): UseAddressReturn => {
-    const { address, status, provider } = useStacksWalletContext();
+    const { address, publicKey, status, provider } = useStacksWalletContext();
 
     return useMemo(() => {
         if (status === 'connected' && address && provider) {
             return {
                 address,
+                publicKey,
                 isConnected: true as const,
                 isConnecting: false as const,
                 isDisconnected: false as const,
@@ -53,10 +56,11 @@ export const useAddress = (): UseAddressReturn => {
 
         return {
             address: undefined,
+            publicKey: undefined,
             isConnected: false as const,
             isConnecting: status === 'connecting',
             isDisconnected: status === 'disconnected',
             provider: undefined,
         };
-    }, [address, status, provider]);
+    }, [address, publicKey, status, provider]);
 };
