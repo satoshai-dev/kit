@@ -54,7 +54,7 @@ export const useXverse = ({
             }
         };
 
-        void checkProvider();
+        checkProvider();
     }, [provider]);
 
     // Re-run on connect/disconnect (hasAddress flip), not on account switches.
@@ -106,7 +106,7 @@ export const useXverse = ({
             }
         };
 
-        void setupXverse();
+        setupXverse();
 
         return () => {
             cancelled = true;
