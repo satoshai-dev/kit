@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { renderHook } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
 import { createElement } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -24,16 +24,18 @@ vi.mock('../../../src/utils/get-stacks-wallets', () => ({
     checkIfStacksProviderIsInstalled: () => false,
 }));
 
+const mockGetLocalStorageWallet = vi.fn(() => null as unknown);
 vi.mock('../../../src/utils/get-local-storage-wallet', () => ({
-    getLocalStorageWallet: () => null,
+    getLocalStorageWallet: () => mockGetLocalStorageWallet(),
 }));
 
 vi.mock('../../../src/hooks/use-wallet-connect/use-wallet-connect', () => ({
     useWalletConnect: vi.fn(),
 }));
 
+const mockUseXverse = vi.fn();
 vi.mock('../../../src/hooks/use-xverse/use-xverse', () => ({
-    useXverse: vi.fn(),
+    useXverse: (args: unknown) => mockUseXverse(args),
 }));
 
 vi.mock('@stacks/connect', () => ({
@@ -91,6 +93,8 @@ const wrapper = ({ children }: { children: React.ReactNode }) =>
 
 beforeEach(() => {
     mockGetStacksWallets.mockClear();
+    mockUseXverse.mockClear();
+    mockGetLocalStorageWallet.mockReturnValue(null);
 });
 
 describe('StacksWalletProvider', () => {
@@ -127,5 +131,47 @@ describe('StacksWalletProvider', () => {
         expect(result.current.status).toBe('disconnected');
         expect(result.current.address).toBeUndefined();
         expect(result.current.provider).toBeUndefined();
+    });
+
+    it('Xverse account change updates both address and publicKey', async () => {
+        mockGetStacksWallets.mockReturnValue({
+            supported: ['xverse'] as SupportedStacksWallet[],
+            installed: ['xverse'] as SupportedStacksWallet[],
+        });
+        // Start in a "connected to Xverse" state so the discriminated union
+        // exposes address/publicKey (disconnected branch zeroes them out).
+        mockGetLocalStorageWallet.mockReturnValue({
+            provider: 'xverse',
+            address: 'SP_OLD',
+            publicKey: 'pk_old',
+        });
+
+        const { result } = renderHook(() => useStacksWalletContext(), {
+            wrapper,
+        });
+
+        // Wait for the async loadPersistedWallet effect to apply.
+        await act(async () => {
+            await new Promise((r) => setTimeout(r, 0));
+        });
+
+        expect(result.current.status).toBe('connected');
+        expect(result.current.publicKey).toBe('pk_old');
+
+        // Grab the latest args useXverse was called with — these contain the
+        // provider's onAccountChange handler.
+        const lastCall = mockUseXverse.mock.calls.at(-1)?.[0] as {
+            onAccountChange: (address: string, publicKey: string) => void;
+            publicKey: string | undefined;
+        };
+        expect(lastCall?.publicKey).toBe('pk_old');
+        expect(lastCall?.onAccountChange).toBeTypeOf('function');
+
+        act(() => {
+            lastCall.onAccountChange('SP_NEW', 'pk_new');
+        });
+
+        expect(result.current.address).toBe('SP_NEW');
+        expect(result.current.publicKey).toBe('pk_new');
     });
 });

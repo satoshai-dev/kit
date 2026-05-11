@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import {
     PostConditionMode,
-    makeUnsignedSTXTokenTransfer,
+    deserializeTransaction,
     tupleCV,
     stringAsciiCV,
     uintCV,
@@ -17,8 +17,8 @@ import {
     useWriteContract,
     useTransferSTX,
     useSignMessage,
-    useSignTransaction,
     useSignStructuredMessage,
+    useSponsoredContractCall,
     createContractConfig,
 } from '@satoshai/kit';
 
@@ -58,7 +58,7 @@ const myToken = createContractConfig({
 
 export default function Home() {
     const { connect, reset, isPending } = useConnect();
-    const { address, isConnected, provider } = useAddress();
+    const { address, publicKey, isConnected, provider } = useAddress();
     const { disconnect } = useDisconnect();
     const { bnsName, isLoading: isBnsLoading } = useBnsName(address);
     const { wallets } = useWallets();
@@ -82,6 +82,10 @@ export default function Home() {
                 <p>
                     <strong>Address:</strong> {address}
                 </p>
+                <p>
+                    <strong>Public Key:</strong>{' '}
+                    {publicKey ? <code>{publicKey}</code> : <em>not available</em>}
+                </p>
                 {isBnsLoading ? (
                     <p>Loading BNS name...</p>
                 ) : bnsName ? (
@@ -93,7 +97,7 @@ export default function Home() {
                 <TransferSTXDemo />
                 <SignStructuredMessageDemo />
                 <WriteContractDemo address={address} />
-                <SignTransactionDemo />
+                <SponsoredContractCallDemo address={address} />
                 <button onClick={() => disconnect()}>Disconnect</button>
             </div>
         );
@@ -293,69 +297,10 @@ function SignStructuredMessageDemo() {
     );
 }
 
-function SignTransactionDemo() {
-    const [broadcast, setBroadcast] = useState(false);
-    const { signTransaction, isPending, isSuccess, isError, data, error, reset } = useSignTransaction();
-
-    const handleSign = async () => {
-        const tx = await makeUnsignedSTXTokenTransfer({
-            recipient: 'SP000000000000000000002Q6VF78',
-            amount: 1000000n,
-            fee: 200n,
-            nonce: 0n,
-            publicKey: '039e3c97ada3bc88a3e584e3f9472e0fab1300e8a78e1494d8bb1804bc3e6a2fa5',
-        });
-
-        signTransaction(
-            { transaction: tx.serialize(), broadcast },
-            {
-                onSuccess: (result) => console.log('Transaction signed:', result),
-                onError: (err) => console.error('Transaction signing failed:', err),
-            }
-        );
-    };
-
-    return (
-        <div style={{ marginTop: '1rem', marginBottom: '1rem' }}>
-            <h3>Sign Transaction</h3>
-            <p style={{ fontSize: '0.85rem', color: '#666' }}>
-                Signs an unsigned STX transfer of 1 STX to the burn address.
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxWidth: '400px' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <input
-                        type="checkbox"
-                        checked={broadcast}
-                        onChange={(e) => setBroadcast(e.target.checked)}
-                        disabled={isPending}
-                    />
-                    Broadcast after signing
-                </label>
-                <button onClick={handleSign} disabled={isPending}>
-                    {isPending ? 'Signing...' : 'Sign Transaction'}
-                </button>
-            </div>
-            {isSuccess && data && (
-                <div style={{ color: 'green' }}>
-                    <p>Signed TX: {data.transaction.slice(0, 40)}...</p>
-                    {data.txid && <p>TXID: {data.txid}</p>}
-                    <button onClick={reset}>Clear</button>
-                </div>
-            )}
-            {isError && (
-                <p style={{ color: 'red' }}>
-                    Error: {error?.message} <button onClick={reset}>Clear</button>
-                </p>
-            )}
-        </div>
-    );
-}
-
 function WriteContractDemo({ address }: { address: string }) {
     const { writeContract, isPending, isSuccess, isError, data, error } = useWriteContract();
 
     const handleTransfer = () => {
-        // Typed mode: functionName autocompletes, args are type-checked
         writeContract(
             {
                 ...myToken,
@@ -386,6 +331,91 @@ function WriteContractDemo({ address }: { address: string }) {
             </button>
             {isSuccess && <p style={{ color: 'green' }}>TX: {data}</p>}
             {isError && <p style={{ color: 'red' }}>Error: {error?.message}</p>}
+        </div>
+    );
+}
+
+function SponsoredContractCallDemo({ address }: { address: string }) {
+    const { sponsoredContractCall, isPending, isSuccess, isError, data, error, reset } =
+        useSponsoredContractCall();
+    const [verifyResult, setVerifyResult] = useState<
+        { ok: true; hash: string } | { ok: false; message: string } | null
+    >(null);
+
+    const handleSponsoredCall = () => {
+        setVerifyResult(null);
+        sponsoredContractCall(
+            {
+                ...myToken,
+                functionName: 'transfer',
+                args: {
+                    amount: 1000000n,
+                    sender: address,
+                    recipient: 'SP000000000000000000002Q6VF78',
+                    memo: null,
+                },
+                pc: {
+                    postConditions: [],
+                    mode: PostConditionMode.Allow,
+                },
+            },
+            {
+                onSuccess: (signedTx) => {
+                    console.log('Sponsored TX signed:', signedTx);
+                    // Run the same verifyOrigin() the sponsor service would run.
+                    // Throws if condition.signer (hash160 of declared publicKey)
+                    // doesn't match the recovered signature pubkey hash.
+                    try {
+                        const tx = deserializeTransaction(signedTx);
+                        const hash = tx.verifyOrigin();
+                        setVerifyResult({ ok: true, hash });
+                    } catch (err) {
+                        setVerifyResult({
+                            ok: false,
+                            message: err instanceof Error ? err.message : String(err),
+                        });
+                    }
+                },
+                onError: (err) => console.error('Sponsored TX failed:', err),
+            }
+        );
+    };
+
+    return (
+        <div style={{ marginTop: '1rem', marginBottom: '1rem' }}>
+            <h3>Sponsored Contract Call</h3>
+            <p style={{ fontSize: '0.85rem', color: '#666' }}>
+                Signs a sponsored contract call (fee = 0) and runs{' '}
+                <code>verifyOrigin()</code> client-side. To repro the stale-publicKey bug:
+                connect Xverse with account A, switch to account B inside Xverse, then click
+                the button. Without the fix, <code>verifyOrigin()</code> throws because the tx
+                declares signer = hash160(A) but the signature recovers pubkey B.
+            </p>
+            <button onClick={handleSponsoredCall} disabled={isPending}>
+                {isPending ? 'Signing...' : 'Sign Sponsored Call'}
+            </button>
+            {isSuccess && data && (
+                <div style={{ color: 'green' }}>
+                    <p>Signed TX: {data.slice(0, 60)}...</p>
+                </div>
+            )}
+            {verifyResult?.ok && (
+                <p style={{ color: 'green' }}>
+                    verifyOrigin() passed — origin sig hash: {verifyResult.hash.slice(0, 16)}...{' '}
+                    <button onClick={() => { setVerifyResult(null); reset(); }}>Clear</button>
+                </p>
+            )}
+            {verifyResult && !verifyResult.ok && (
+                <p style={{ color: 'red' }}>
+                    verifyOrigin() FAILED: {verifyResult.message}{' '}
+                    <button onClick={() => { setVerifyResult(null); reset(); }}>Clear</button>
+                </p>
+            )}
+            {isError && (
+                <p style={{ color: 'red' }}>
+                    Error: {error?.message} <button onClick={reset}>Clear</button>
+                </p>
+            )}
         </div>
     );
 }

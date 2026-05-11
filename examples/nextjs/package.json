@@ -8,14 +8,14 @@
   },
   "dependencies": {
     "@satoshai/kit": "workspace:*",
-    "@stacks/transactions": "^7.2.0",
-    "next": "^16.0.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "@stacks/transactions": "^7.4.0",
+    "next": "^16.2.6",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6"
   },
   "devDependencies": {
-    "@types/react": "^19.2.2",
-    "@types/react-dom": "^19.2.2",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
     "typescript": "^5.7.0"
   }
 }
