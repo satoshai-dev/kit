@@ -31,16 +31,18 @@ export const extractAndValidateStacksAddress = (
     addresses:
         | {
               address: string;
+              publicKey?: string;
               addressType: string;
               purpose: string;
           }[]
         | undefined,
     currentAddress: string | undefined,
-    onAddressChange: (address: string) => void,
+    currentPublicKey: string | undefined,
+    onAccountChange: (address: string, publicKey: string) => void,
     connect: () => Promise<void>
 ) => {
     if (!addresses || !Array.isArray(addresses)) {
-        void connect();
+        connect();
         return;
     }
 
@@ -48,12 +50,15 @@ export const extractAndValidateStacksAddress = (
         (acc) => acc.purpose === 'stacks' || acc.addressType === 'stacks'
     );
 
-    if (!stacksAccount?.address) {
-        void connect();
+    if (!stacksAccount?.address || !stacksAccount.publicKey) {
+        connect();
         return;
     }
 
-    if (stacksAccount.address !== currentAddress) {
-        onAddressChange(stacksAccount.address);
+    if (
+        stacksAccount.address !== currentAddress ||
+        stacksAccount.publicKey !== currentPublicKey
+    ) {
+        onAccountChange(stacksAccount.address, stacksAccount.publicKey);
     }
 };

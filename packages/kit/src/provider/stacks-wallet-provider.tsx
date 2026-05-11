@@ -435,10 +435,23 @@ export const StacksWalletProvider = ({
         [onAddressChange]
     );
 
+    // Xverse emits accountChange with both address and publicKey. We must update
+    // both, otherwise hooks that build unsigned txs (e.g. useSponsoredContractCall)
+    // sign with a stale publicKey and the tx fails verifyOrigin().
+    const handleXverseAccountChange = useCallback(
+        (newAddress: string, newPublicKey: string) => {
+            setAddress(newAddress);
+            setPublicKey(newPublicKey);
+            onAddressChange?.(newAddress);
+        },
+        [onAddressChange]
+    );
+
     useXverse({
         address,
+        publicKey,
         provider,
-        onAddressChange: handleAddressChange,
+        onAccountChange: handleXverseAccountChange,
         connect,
     });
 

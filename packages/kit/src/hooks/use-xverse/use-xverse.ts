@@ -1,5 +1,5 @@
 import { getSelectedProvider } from '@stacks/connect';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import type { SupportedStacksWallet } from '../../constants/wallets';
 import type { ConnectOptions } from '../../provider/stacks-wallet-provider.types';
@@ -13,19 +13,33 @@ import {
 
 export const useXverse = ({
     address,
+    publicKey,
     provider,
-    onAddressChange,
+    onAccountChange,
     connect,
 }: {
     address: string | undefined;
+    publicKey: string | undefined;
     provider: SupportedStacksWallet | undefined;
-    onAddressChange: (newAddress: string) => void;
+    onAccountChange: (address: string, publicKey: string) => void;
     connect: (
         providerId?: SupportedStacksWallet,
         options?: ConnectOptions
     ) => Promise<void>;
 }) => {
     const [isProviderReady, setIsProviderReady] = useState(false);
+
+    // Mirror current address/publicKey into refs so the accountChange listener
+    // always compares against the latest values without re-mounting the effect.
+    // Keeping them in the dep array tore down and re-ran the setup on every
+    // account switch, which called wallet_connect a second time and prompted
+    // Xverse for re-authorization.
+    const addressRef = useRef(address);
+    const publicKeyRef = useRef(publicKey);
+    useEffect(() => {
+        addressRef.current = address;
+        publicKeyRef.current = publicKey;
+    }, [address, publicKey]);
 
     useEffect(() => {
         if (provider !== 'xverse') return;
@@ -40,11 +54,14 @@ export const useXverse = ({
             }
         };
 
-        void checkProvider();
+        checkProvider();
     }, [provider]);
 
+    // Re-run on connect/disconnect (hasAddress flip), not on account switches.
+    const hasAddress = !!address;
+
     useEffect(() => {
-        if (provider !== 'xverse' || !address || !isProviderReady) return;
+        if (provider !== 'xverse' || !hasAddress || !isProviderReady) return;
 
         let cancelled = false;
         let removeListener: (() => void) | undefined;
@@ -66,8 +83,9 @@ export const useXverse = ({
 
                 extractAndValidateStacksAddress(
                     response?.result?.addresses,
-                    address,
-                    onAddressChange,
+                    addressRef.current,
+                    publicKeyRef.current,
+                    onAccountChange,
                     () => connect('xverse')
                 );
 
@@ -76,8 +94,9 @@ export const useXverse = ({
                     (event: XverseAccountChangeEvent) => {
                         extractAndValidateStacksAddress(
                             event?.addresses,
-                            address,
-                            onAddressChange,
+                            addressRef.current,
+                            publicKeyRef.current,
+                            onAccountChange,
                             () => connect('xverse')
                         );
                     }
@@ -87,7 +106,7 @@ export const useXverse = ({
             }
         };
 
-        void setupXverse();
+        setupXverse();
 
         return () => {
             cancelled = true;
@@ -100,5 +119,5 @@ export const useXverse = ({
                 console.error('Failed to remove Xverse listener:', error);
             }
         };
-    }, [address, isProviderReady, onAddressChange, connect, provider]);
+    }, [hasAddress, isProviderReady, onAccountChange, connect, provider]);
 };

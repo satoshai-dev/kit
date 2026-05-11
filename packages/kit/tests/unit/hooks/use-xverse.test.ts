@@ -39,8 +39,9 @@ describe('useXverse', () => {
             renderHook(() =>
                 useXverse({
                     address: 'SP123',
+                    publicKey: 'pkA',
                     provider: 'leather',
-                    onAddressChange: vi.fn(),
+                    onAccountChange: vi.fn(),
                     connect: vi.fn(),
                 })
             );
@@ -52,8 +53,9 @@ describe('useXverse', () => {
             renderHook(() =>
                 useXverse({
                     address: undefined,
+                    publicKey: undefined,
                     provider: undefined,
-                    onAddressChange: vi.fn(),
+                    onAccountChange: vi.fn(),
                     connect: vi.fn(),
                 })
             );
@@ -76,8 +78,9 @@ describe('useXverse', () => {
                 renderHook(() =>
                     useXverse({
                         address: 'SP123',
+                        publicKey: 'pkA',
                         provider: 'xverse',
-                        onAddressChange: vi.fn(),
+                        onAccountChange: vi.fn(),
                         connect: vi.fn(),
                     })
                 );
@@ -97,8 +100,9 @@ describe('useXverse', () => {
                 renderHook(() =>
                     useXverse({
                         address: 'SP123',
+                        publicKey: 'pkA',
                         provider: 'xverse',
-                        onAddressChange: vi.fn(),
+                        onAccountChange: vi.fn(),
                         connect: vi.fn(),
                     })
                 );
@@ -122,8 +126,9 @@ describe('useXverse', () => {
                 renderHook(() =>
                     useXverse({
                         address: 'SP123',
+                        publicKey: 'pkA',
                         provider: 'xverse',
-                        onAddressChange: vi.fn(),
+                        onAccountChange: vi.fn(),
                         connect: vi.fn(),
                     })
                 );
@@ -154,8 +159,9 @@ describe('useXverse', () => {
                 renderHook(() =>
                     useXverse({
                         address: 'SP123',
+                        publicKey: 'pkA',
                         provider: 'xverse',
-                        onAddressChange: vi.fn(),
+                        onAccountChange: vi.fn(),
                         connect: vi.fn(),
                     })
                 );
@@ -172,7 +178,7 @@ describe('useXverse', () => {
             );
         });
 
-        it('calls extractAndValidateStacksAddress with wallet_connect response', async () => {
+        it('calls extractAndValidateStacksAddress with wallet_connect response and cached publicKey', async () => {
             mockWaitForXverseProvider.mockResolvedValue(true);
             mockGetXverseProductInfo.mockResolvedValue({ version: '2.0.0' });
             mockShouldSupportAccountChange.mockReturnValue(true);
@@ -180,7 +186,7 @@ describe('useXverse', () => {
             const mockAddresses = [
                 {
                     address: 'SP456',
-                    publicKey: 'pk',
+                    publicKey: 'pkB',
                     purpose: 'stacks',
                     addressType: 'stacks',
                     walletType: 'software',
@@ -195,14 +201,15 @@ describe('useXverse', () => {
                 addListener: mockAddListener,
             });
 
-            const onAddressChange = vi.fn();
+            const onAccountChange = vi.fn();
 
             await act(async () => {
                 renderHook(() =>
                     useXverse({
                         address: 'SP123',
+                        publicKey: 'pkA',
                         provider: 'xverse',
-                        onAddressChange,
+                        onAccountChange,
                         connect: vi.fn(),
                     })
                 );
@@ -214,12 +221,13 @@ describe('useXverse', () => {
             ).toHaveBeenCalledWith(
                 mockAddresses,
                 'SP123',
-                onAddressChange,
+                'pkA',
+                onAccountChange,
                 expect.any(Function)
             );
         });
 
-        it('fires extractAndValidateStacksAddress on accountChange event', async () => {
+        it('fires extractAndValidateStacksAddress on accountChange event with cached publicKey', async () => {
             mockWaitForXverseProvider.mockResolvedValue(true);
             mockGetXverseProductInfo.mockResolvedValue({ version: '2.0.0' });
             mockShouldSupportAccountChange.mockReturnValue(true);
@@ -238,14 +246,15 @@ describe('useXverse', () => {
                 addListener: mockAddListener,
             });
 
-            const onAddressChange = vi.fn();
+            const onAccountChange = vi.fn();
 
             await act(async () => {
                 renderHook(() =>
                     useXverse({
                         address: 'SP123',
+                        publicKey: 'pkA',
                         provider: 'xverse',
-                        onAddressChange,
+                        onAccountChange,
                         connect: vi.fn(),
                     })
                 );
@@ -260,7 +269,7 @@ describe('useXverse', () => {
                 addresses: [
                     {
                         address: 'SP789',
-                        publicKey: 'pk',
+                        publicKey: 'pkB',
                         purpose: 'stacks',
                         addressType: 'stacks',
                         walletType: 'software',
@@ -277,7 +286,8 @@ describe('useXverse', () => {
             ).toHaveBeenCalledWith(
                 accountEvent.addresses,
                 'SP123',
-                onAddressChange,
+                'pkA',
+                onAccountChange,
                 expect.any(Function)
             );
         });
@@ -302,8 +312,9 @@ describe('useXverse', () => {
                 const hook = renderHook(() =>
                     useXverse({
                         address: 'SP123',
+                        publicKey: 'pkA',
                         provider: 'xverse',
-                        onAddressChange: vi.fn(),
+                        onAccountChange: vi.fn(),
                         connect: vi.fn(),
                     })
                 );
@@ -342,8 +353,9 @@ describe('useXverse', () => {
                 const hook = renderHook(() =>
                     useXverse({
                         address: 'SP123',
+                        publicKey: 'pkA',
                         provider: 'xverse',
-                        onAddressChange: vi.fn(),
+                        onAccountChange: vi.fn(),
                         connect: vi.fn(),
                     })
                 );
@@ -379,8 +391,9 @@ describe('useXverse', () => {
             const { unmount } = renderHook(() =>
                 useXverse({
                     address: 'SP123',
+                    publicKey: 'pkA',
                     provider: 'xverse',
-                    onAddressChange: vi.fn(),
+                    onAccountChange: vi.fn(),
                     connect: vi.fn(),
                 })
             );

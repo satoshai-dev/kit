@@ -26,88 +26,141 @@ describe('shouldSupportAccountChange', () => {
 
 describe('extractAndValidateStacksAddress', () => {
     it('calls connect when addresses is undefined', () => {
-        const onAddressChange = vi.fn();
+        const onAccountChange = vi.fn();
         const connect = vi.fn().mockResolvedValue(undefined);
 
-        extractAndValidateStacksAddress(undefined, 'SP123', onAddressChange, connect);
+        extractAndValidateStacksAddress(undefined, 'SP123', 'pkA', onAccountChange, connect);
 
         expect(connect).toHaveBeenCalled();
-        expect(onAddressChange).not.toHaveBeenCalled();
+        expect(onAccountChange).not.toHaveBeenCalled();
     });
 
     it('calls connect when no stacks account found', () => {
-        const onAddressChange = vi.fn();
+        const onAccountChange = vi.fn();
         const connect = vi.fn().mockResolvedValue(undefined);
 
         extractAndValidateStacksAddress(
-            [{ address: 'bc1qxyz', addressType: 'bitcoin', purpose: 'payment' }],
+            [{ address: 'bc1qxyz', publicKey: 'pkX', addressType: 'bitcoin', purpose: 'payment' }],
             'SP123',
-            onAddressChange,
+            'pkA',
+            onAccountChange,
             connect
         );
 
         expect(connect).toHaveBeenCalled();
-        expect(onAddressChange).not.toHaveBeenCalled();
+        expect(onAccountChange).not.toHaveBeenCalled();
     });
 
-    it('calls onAddressChange when stacks address differs from current', () => {
-        const onAddressChange = vi.fn();
+    it('calls connect when stacks account has no publicKey', () => {
+        const onAccountChange = vi.fn();
         const connect = vi.fn().mockResolvedValue(undefined);
 
         extractAndValidateStacksAddress(
             [{ address: 'SP456', addressType: 'stacks', purpose: 'stacks' }],
             'SP123',
-            onAddressChange,
+            'pkA',
+            onAccountChange,
             connect
         );
 
-        expect(onAddressChange).toHaveBeenCalledWith('SP456');
-        expect(connect).not.toHaveBeenCalled();
+        expect(connect).toHaveBeenCalled();
+        expect(onAccountChange).not.toHaveBeenCalled();
     });
 
-    it('does nothing when stacks address matches current', () => {
-        const onAddressChange = vi.fn();
+    it('calls onAccountChange with both fields when address differs', () => {
+        const onAccountChange = vi.fn();
         const connect = vi.fn().mockResolvedValue(undefined);
 
         extractAndValidateStacksAddress(
-            [{ address: 'SP123', addressType: 'stacks', purpose: 'stacks' }],
+            [{ address: 'SP456', publicKey: 'pkB', addressType: 'stacks', purpose: 'stacks' }],
             'SP123',
-            onAddressChange,
+            'pkA',
+            onAccountChange,
             connect
         );
 
-        expect(onAddressChange).not.toHaveBeenCalled();
+        expect(onAccountChange).toHaveBeenCalledWith('SP456', 'pkB');
+        expect(connect).not.toHaveBeenCalled();
+    });
+
+    it('calls onAccountChange when only publicKey differs', () => {
+        const onAccountChange = vi.fn();
+        const connect = vi.fn().mockResolvedValue(undefined);
+
+        extractAndValidateStacksAddress(
+            [{ address: 'SP123', publicKey: 'pkNew', addressType: 'stacks', purpose: 'stacks' }],
+            'SP123',
+            'pkOld',
+            onAccountChange,
+            connect
+        );
+
+        expect(onAccountChange).toHaveBeenCalledWith('SP123', 'pkNew');
+        expect(connect).not.toHaveBeenCalled();
+    });
+
+    it('calls onAccountChange when current publicKey is undefined', () => {
+        const onAccountChange = vi.fn();
+        const connect = vi.fn().mockResolvedValue(undefined);
+
+        extractAndValidateStacksAddress(
+            [{ address: 'SP123', publicKey: 'pkA', addressType: 'stacks', purpose: 'stacks' }],
+            'SP123',
+            undefined,
+            onAccountChange,
+            connect
+        );
+
+        expect(onAccountChange).toHaveBeenCalledWith('SP123', 'pkA');
+        expect(connect).not.toHaveBeenCalled();
+    });
+
+    it('does nothing when address and publicKey both match', () => {
+        const onAccountChange = vi.fn();
+        const connect = vi.fn().mockResolvedValue(undefined);
+
+        extractAndValidateStacksAddress(
+            [{ address: 'SP123', publicKey: 'pkA', addressType: 'stacks', purpose: 'stacks' }],
+            'SP123',
+            'pkA',
+            onAccountChange,
+            connect
+        );
+
+        expect(onAccountChange).not.toHaveBeenCalled();
         expect(connect).not.toHaveBeenCalled();
     });
 
     it('finds stacks account by purpose field', () => {
-        const onAddressChange = vi.fn();
+        const onAccountChange = vi.fn();
         const connect = vi.fn().mockResolvedValue(undefined);
 
         extractAndValidateStacksAddress(
             [
-                { address: 'bc1qxyz', addressType: 'bitcoin', purpose: 'payment' },
-                { address: 'SP789', addressType: 'other', purpose: 'stacks' },
+                { address: 'bc1qxyz', publicKey: 'pkX', addressType: 'bitcoin', purpose: 'payment' },
+                { address: 'SP789', publicKey: 'pkS', addressType: 'other', purpose: 'stacks' },
             ],
             'SP123',
-            onAddressChange,
+            'pkA',
+            onAccountChange,
             connect
         );
 
-        expect(onAddressChange).toHaveBeenCalledWith('SP789');
+        expect(onAccountChange).toHaveBeenCalledWith('SP789', 'pkS');
     });
 
     it('finds stacks account by addressType field', () => {
-        const onAddressChange = vi.fn();
+        const onAccountChange = vi.fn();
         const connect = vi.fn().mockResolvedValue(undefined);
 
         extractAndValidateStacksAddress(
-            [{ address: 'SP789', addressType: 'stacks', purpose: 'other' }],
+            [{ address: 'SP789', publicKey: 'pkS', addressType: 'stacks', purpose: 'other' }],
             'SP123',
-            onAddressChange,
+            'pkA',
+            onAccountChange,
             connect
         );
 
-        expect(onAddressChange).toHaveBeenCalledWith('SP789');
+        expect(onAccountChange).toHaveBeenCalledWith('SP789', 'pkS');
     });
 });
