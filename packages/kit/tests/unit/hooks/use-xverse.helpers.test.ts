@@ -113,6 +113,31 @@ describe('extractAndValidateStacksAddress', () => {
         expect(connect).not.toHaveBeenCalled();
     });
 
+    it('omits the BTC address on account switch when the payment entry has no public key', () => {
+        const onAccountChange = vi.fn();
+        const connect = vi.fn().mockResolvedValue(undefined);
+
+        // Mirrors the connect-path rule: a payment entry without a public key
+        // yields no BTC address (can't sign a withdrawal without the pubkey).
+        extractAndValidateStacksAddress(
+            [
+                { address: 'bc1qpay', addressType: 'p2wpkh', purpose: 'payment' },
+                { address: 'SP456', publicKey: 'pkB', addressType: 'stacks', purpose: 'stacks' },
+            ],
+            'SP123',
+            'pkA',
+            onAccountChange,
+            connect
+        );
+
+        expect(onAccountChange).toHaveBeenCalledWith({
+            address: 'SP456',
+            publicKey: 'pkB',
+            btcAddress: undefined,
+            btcPublicKey: undefined,
+        });
+    });
+
     it('calls onAccountChange when only publicKey differs', () => {
         const onAccountChange = vi.fn();
         const connect = vi.fn().mockResolvedValue(undefined);

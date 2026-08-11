@@ -1,5 +1,7 @@
 import { getSelectedProvider } from '@stacks/connect';
 
+import { extractBitcoinPaymentAddress } from '../../provider/stacks-wallet-provider.helpers';
+
 export const getXverseProductInfo = async (): Promise<{
     version?: string;
     name?: string;
@@ -68,15 +70,17 @@ export const extractAndValidateStacksAddress = (
         // resolve it here and hand it back alongside the Stacks values. Without
         // this, a wallet-side account switch would leave a stale BTC address
         // (same failure class as the stale publicKey fixed in #74).
-        const paymentAccount = addresses.find(
-            (acc) => acc.purpose === 'payment'
-        );
+        //
+        // Reuse the shared extractor so this path applies the exact same rules
+        // as connect/restore (payment entry, public key required) — otherwise
+        // the same wallet payload could yield a BTC address here but not there.
+        const btc = extractBitcoinPaymentAddress('xverse', addresses);
 
         onAccountChange({
             address: stacksAccount.address,
             publicKey: stacksAccount.publicKey,
-            btcAddress: paymentAccount?.address,
-            btcPublicKey: paymentAccount?.publicKey,
+            btcAddress: btc?.address,
+            btcPublicKey: btc?.publicKey,
         });
     }
 };

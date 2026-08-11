@@ -17,9 +17,9 @@ type UseBitcoinAddressReturn =
       };
 
 /**
- * Read the connected wallet's Bitcoin **payment** address (native segwit,
- * `p2wpkh`) — the send/receive BTC address, e.g. the destination for an sBTC
- * withdrawal (bridge-out).
+ * Read the connected wallet's Bitcoin **payment** address — the send/receive
+ * BTC address (native segwit / `p2wpkh` for the supported wallets), e.g. the
+ * destination for an sBTC withdrawal (bridge-out).
  *
  * Returns a discriminated union: when `isAvailable` is `true`, `paymentAddress`
  * is guaranteed to be a string. `isAvailable` is `false` when no wallet is

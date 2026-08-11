@@ -111,12 +111,15 @@ export const unregisterOkxProvider = () => {
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
 /**
- * Extract the Bitcoin **payment** address (native segwit, `p2wpkh`) from a
- * wallet's `getAddresses` response.
+ * Extract the Bitcoin **payment** address from a wallet's `getAddresses`
+ * response — the send/receive BTC address (native segwit / `p2wpkh` for the
+ * supported wallets), and the correct destination for an sBTC withdrawal
+ * (bridge-out).
  *
- * This is the send/receive BTC address — the correct destination for an sBTC
- * withdrawal (bridge-out). The taproot/ordinals address (`p2tr`) is deliberately
- * ignored: it holds inscriptions and must not receive plain BTC.
+ * The taproot/ordinals address (`p2tr`) is deliberately ignored: it holds
+ * inscriptions and must not receive plain BTC. Selection is by payment
+ * *purpose*, not script type, so a wallet that returns a non-`p2wpkh` payment
+ * address (e.g. legacy nested segwit) still yields the correct destination.
  *
  * Wallets disagree on how they label entries:
  * - **Xverse** omits `symbol` and uses `purpose` (`'payment'` for p2wpkh).

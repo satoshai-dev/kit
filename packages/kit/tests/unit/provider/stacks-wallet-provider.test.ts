@@ -3,7 +3,13 @@ import { renderHook, act } from '@testing-library/react';
 import { createElement } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+import { request, getSelectedProviderId } from '@stacks/connect';
+
 import type { SupportedStacksWallet } from '../../../src/constants/wallets';
+import {
+    extractStacksAddress,
+    extractBitcoinPaymentAddress,
+} from '../../../src/provider/stacks-wallet-provider.helpers';
 
 // ── Mocks ──────────────────────────────────────────────────────────
 
@@ -189,5 +195,39 @@ describe('StacksWalletProvider', () => {
         expect(result.current.publicKey).toBe('pk_new');
         expect(result.current.btcAddress).toBe('bc1q_new');
         expect(result.current.btcPublicKey).toBe('btc_pk_new');
+    });
+
+    it('connect() wires the extracted BTC payment address into state', async () => {
+        mockGetStacksWallets.mockReturnValue({
+            supported: ['xverse'] as SupportedStacksWallet[],
+            installed: ['xverse'] as SupportedStacksWallet[],
+        });
+
+        // Drive the modal connect branch: request → resolve provider → extract.
+        vi.mocked(request).mockResolvedValue({
+            addresses: [{ address: 'ignored', publicKey: 'ignored' }],
+        });
+        vi.mocked(getSelectedProviderId).mockReturnValue('WalletConnectProvider');
+        vi.mocked(extractStacksAddress).mockReturnValue({
+            address: 'SP_C',
+            publicKey: 'pk_c',
+        });
+        vi.mocked(extractBitcoinPaymentAddress).mockReturnValue({
+            address: 'bc1q_c',
+            publicKey: 'btc_c',
+        });
+
+        const { result } = renderHook(() => useStacksWalletContext(), {
+            wrapper,
+        });
+
+        await act(async () => {
+            await result.current.connect();
+        });
+
+        expect(result.current.status).toBe('connected');
+        expect(result.current.address).toBe('SP_C');
+        expect(result.current.btcAddress).toBe('bc1q_c');
+        expect(result.current.btcPublicKey).toBe('btc_c');
     });
 });
