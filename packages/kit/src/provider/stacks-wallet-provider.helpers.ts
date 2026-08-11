@@ -110,6 +110,50 @@ export const unregisterOkxProvider = () => {
 };
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
+/**
+ * Extract the Bitcoin **payment** address (native segwit, `p2wpkh`) from a
+ * wallet's `getAddresses` response.
+ *
+ * This is the send/receive BTC address — the correct destination for an sBTC
+ * withdrawal (bridge-out). The taproot/ordinals address (`p2tr`) is deliberately
+ * ignored: it holds inscriptions and must not receive plain BTC.
+ *
+ * Wallets disagree on how they label entries:
+ * - **Xverse** omits `symbol` and uses `purpose` (`'payment'` for p2wpkh).
+ * - **Leather** uses `symbol: 'BTC'` plus `type` (`'p2wpkh'` for payment).
+ *
+ * Returns `undefined` for wallets that don't surface a BTC payment address
+ * through `getAddresses` (e.g. OKX, WalletConnect) or when no payment entry
+ * with a public key is present.
+ */
+export const extractBitcoinPaymentAddress = (
+    typedProvider: SupportedStacksWallet,
+    addresses: {
+        address?: string;
+        symbol?: string;
+        publicKey?: string;
+        purpose?: string;
+        type?: string;
+    }[]
+): { address: string; publicKey: string } | undefined => {
+    if (!addresses?.length) return undefined;
+
+    const entry =
+        typedProvider === 'xverse'
+            ? addresses.find((addr) => addr.purpose === 'payment')
+            : typedProvider === 'leather'
+              ? addresses.find(
+                    (addr) => addr.symbol === 'BTC' && addr.type === 'p2wpkh'
+                )
+              : undefined;
+
+    if (entry?.address && entry.publicKey) {
+        return { address: entry.address, publicKey: entry.publicKey };
+    }
+
+    return undefined;
+};
+
 export const extractStacksAddress = (
     typedProvider: SupportedStacksWallet,
     addresses: { address?: string; symbol?: string; publicKey?: string }[]

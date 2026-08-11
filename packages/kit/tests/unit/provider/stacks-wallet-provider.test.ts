@@ -57,6 +57,7 @@ vi.mock('@stacks/connect', () => ({
 vi.mock('../../../src/provider/stacks-wallet-provider.helpers', () => ({
     getOKXStacksAddress: vi.fn(),
     extractStacksAddress: vi.fn(),
+    extractBitcoinPaymentAddress: vi.fn(),
     buildWalletConnectConfig: vi.fn(),
     registerOkxProvider: vi.fn(),
     unregisterOkxProvider: vi.fn(),
@@ -133,7 +134,7 @@ describe('StacksWalletProvider', () => {
         expect(result.current.provider).toBeUndefined();
     });
 
-    it('Xverse account change updates both address and publicKey', async () => {
+    it('Xverse account change updates address, publicKey and BTC address', async () => {
         mockGetStacksWallets.mockReturnValue({
             supported: ['xverse'] as SupportedStacksWallet[],
             installed: ['xverse'] as SupportedStacksWallet[],
@@ -144,6 +145,8 @@ describe('StacksWalletProvider', () => {
             provider: 'xverse',
             address: 'SP_OLD',
             publicKey: 'pk_old',
+            btcAddress: 'bc1q_old',
+            btcPublicKey: 'btc_pk_old',
         });
 
         const { result } = renderHook(() => useStacksWalletContext(), {
@@ -157,21 +160,34 @@ describe('StacksWalletProvider', () => {
 
         expect(result.current.status).toBe('connected');
         expect(result.current.publicKey).toBe('pk_old');
+        expect(result.current.btcAddress).toBe('bc1q_old');
 
         // Grab the latest args useXverse was called with — these contain the
         // provider's onAccountChange handler.
         const lastCall = mockUseXverse.mock.calls.at(-1)?.[0] as {
-            onAccountChange: (address: string, publicKey: string) => void;
+            onAccountChange: (account: {
+                address: string;
+                publicKey: string;
+                btcAddress?: string;
+                btcPublicKey?: string;
+            }) => void;
             publicKey: string | undefined;
         };
         expect(lastCall?.publicKey).toBe('pk_old');
         expect(lastCall?.onAccountChange).toBeTypeOf('function');
 
         act(() => {
-            lastCall.onAccountChange('SP_NEW', 'pk_new');
+            lastCall.onAccountChange({
+                address: 'SP_NEW',
+                publicKey: 'pk_new',
+                btcAddress: 'bc1q_new',
+                btcPublicKey: 'btc_pk_new',
+            });
         });
 
         expect(result.current.address).toBe('SP_NEW');
         expect(result.current.publicKey).toBe('pk_new');
+        expect(result.current.btcAddress).toBe('bc1q_new');
+        expect(result.current.btcPublicKey).toBe('btc_pk_new');
     });
 });

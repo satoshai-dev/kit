@@ -11,6 +11,8 @@ import { SUPPORTED_STACKS_WALLETS } from '../constants/wallets';
 export const getLocalStorageWallet = (): {
     address: string;
     publicKey?: string;
+    btcAddress?: string;
+    btcPublicKey?: string;
     provider: SupportedStacksWallet;
 } | null => {
     if (typeof window === 'undefined') return null;
@@ -23,6 +25,8 @@ export const getLocalStorageWallet = (): {
         const data = JSON.parse(stored) as {
             address: string;
             publicKey?: string;
+            btcAddress?: string;
+            btcPublicKey?: string;
             provider: SupportedStacksWallet;
         };
 

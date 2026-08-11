@@ -17,6 +17,7 @@ export { StacksWalletProvider } from './provider/stacks-wallet-provider';
 
 // Hooks
 export { useAddress } from './hooks/use-address';
+export { useBitcoinAddress } from './hooks/use-bitcoin-address';
 export { useConnect } from './hooks/use-connect';
 export { useDisconnect } from './hooks/use-disconnect';
 export {

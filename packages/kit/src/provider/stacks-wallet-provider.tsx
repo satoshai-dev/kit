@@ -35,6 +35,7 @@ import {
 import {
     getOKXStacksAddress,
     extractStacksAddress,
+    extractBitcoinPaymentAddress,
     buildWalletConnectConfig,
     registerOkxProvider,
     unregisterOkxProvider,
@@ -98,6 +99,8 @@ export const StacksWalletProvider = ({
 }: StacksWalletProviderProps) => {
     const [address, setAddress] = useState<string | undefined>();
     const [publicKey, setPublicKey] = useState<string | undefined>();
+    const [btcAddress, setBtcAddress] = useState<string | undefined>();
+    const [btcPublicKey, setBtcPublicKey] = useState<string | undefined>();
     const [provider, setProvider] = useState<
         SupportedStacksWallet | undefined
     >();
@@ -178,6 +181,8 @@ export const StacksWalletProvider = ({
 
                 setAddress(persisted.address);
                 setPublicKey(persisted.publicKey);
+                setBtcAddress(persisted.btcAddress);
+                setBtcPublicKey(persisted.btcPublicKey);
                 setProvider(persisted.provider);
                 setSelectedProviderId(
                     STACKS_TO_STACKS_CONNECT_PROVIDERS[persisted.provider]
@@ -253,9 +258,15 @@ export const StacksWalletProvider = ({
                         resolvedProvider,
                         data.addresses
                     );
+                    const btc = extractBitcoinPaymentAddress(
+                        resolvedProvider,
+                        data.addresses
+                    );
 
                     setAddress(extracted.address);
                     setPublicKey(extracted.publicKey);
+                    setBtcAddress(btc?.address);
+                    setBtcPublicKey(btc?.publicKey);
                     setProvider(resolvedProvider);
                     options?.onSuccess?.(extracted.address, resolvedProvider);
                 } catch (error) {
@@ -319,6 +330,10 @@ export const StacksWalletProvider = ({
                     if (connectGenRef.current !== gen) return;
                     setAddress(data.address);
                     setPublicKey(data.publicKey);
+                    // OKX doesn't expose a BTC payment address via this path;
+                    // clear any value carried over from a previous wallet.
+                    setBtcAddress(undefined);
+                    setBtcPublicKey(undefined);
                     setProvider(data.provider);
                     options?.onSuccess?.(data.address, data.provider);
                     return;
@@ -363,9 +378,15 @@ export const StacksWalletProvider = ({
                     typedProvider,
                     data.addresses
                 );
+                const btc = extractBitcoinPaymentAddress(
+                    typedProvider,
+                    data.addresses
+                );
 
                 setAddress(extracted.address);
                 setPublicKey(extracted.publicKey);
+                setBtcAddress(btc?.address);
+                setBtcPublicKey(btc?.publicKey);
                 setProvider(typedProvider);
                 options?.onSuccess?.(extracted.address, typedProvider);
             } catch (error) {
@@ -399,6 +420,8 @@ export const StacksWalletProvider = ({
             localStorage.removeItem(LOCAL_STORAGE_STACKS);
             setAddress(undefined);
             setPublicKey(undefined);
+            setBtcAddress(undefined);
+            setBtcPublicKey(undefined);
             setProvider(undefined);
             getSelectedProvider()?.disconnect?.();
             clearSelectedProviderId();
@@ -413,9 +436,9 @@ export const StacksWalletProvider = ({
 
         localStorage.setItem(
             LOCAL_STORAGE_STACKS,
-            JSON.stringify({ address, publicKey, provider })
+            JSON.stringify({ address, publicKey, btcAddress, btcPublicKey, provider })
         );
-    }, [address, publicKey, provider]);
+    }, [address, publicKey, btcAddress, btcPublicKey, provider]);
 
     useEffect(() => {
         const isConnected = !!address && !!provider;
@@ -435,14 +458,23 @@ export const StacksWalletProvider = ({
         [onAddressChange]
     );
 
-    // Xverse emits accountChange with both address and publicKey. We must update
-    // both, otherwise hooks that build unsigned txs (e.g. useSponsoredContractCall)
-    // sign with a stale publicKey and the tx fails verifyOrigin().
+    // Xverse emits accountChange with the full address set. We must update the
+    // Stacks address + publicKey (otherwise hooks that build unsigned txs, e.g.
+    // useSponsoredContractCall, sign with a stale publicKey and the tx fails
+    // verifyOrigin()) and the BTC payment address (otherwise an sBTC withdrawal
+    // would target the previous account's Bitcoin address).
     const handleXverseAccountChange = useCallback(
-        (newAddress: string, newPublicKey: string) => {
-            setAddress(newAddress);
-            setPublicKey(newPublicKey);
-            onAddressChange?.(newAddress);
+        (account: {
+            address: string;
+            publicKey: string;
+            btcAddress?: string;
+            btcPublicKey?: string;
+        }) => {
+            setAddress(account.address);
+            setPublicKey(account.publicKey);
+            setBtcAddress(account.btcAddress);
+            setBtcPublicKey(account.btcPublicKey);
+            onAddressChange?.(account.address);
         },
         [onAddressChange]
     );
@@ -459,6 +491,8 @@ export const StacksWalletProvider = ({
         localStorage.removeItem(LOCAL_STORAGE_STACKS);
         setAddress(undefined);
         setPublicKey(undefined);
+        setBtcAddress(undefined);
+        setBtcPublicKey(undefined);
         setProvider(undefined);
         onDisconnect?.();
     }, [onDisconnect]);
@@ -493,13 +527,22 @@ export const StacksWalletProvider = ({
 
     const value = useMemo((): WalletContextValue => {
         const walletState: WalletState = isConnecting
-            ? { status: 'connecting', address: undefined, publicKey: undefined, provider: undefined }
+            ? {
+                  status: 'connecting',
+                  address: undefined,
+                  publicKey: undefined,
+                  btcAddress: undefined,
+                  btcPublicKey: undefined,
+                  provider: undefined,
+              }
             : address && provider
-            ? { status: 'connected', address, publicKey, provider }
+            ? { status: 'connected', address, publicKey, btcAddress, btcPublicKey, provider }
             : {
                   status: 'disconnected',
                   address: undefined,
                   publicKey: undefined,
+                  btcAddress: undefined,
+                  btcPublicKey: undefined,
                   provider: undefined,
               };
 
@@ -510,7 +553,7 @@ export const StacksWalletProvider = ({
             reset,
             wallets: walletInfos,
         };
-    }, [address, publicKey, provider, isConnecting, connect, disconnect, reset, walletInfosKey]);
+    }, [address, publicKey, btcAddress, btcPublicKey, provider, isConnecting, connect, disconnect, reset, walletInfosKey]);
 
     return (
         <StacksWalletContext.Provider value={value}>

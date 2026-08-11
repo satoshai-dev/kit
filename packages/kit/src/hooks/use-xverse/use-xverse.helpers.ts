@@ -38,7 +38,12 @@ export const extractAndValidateStacksAddress = (
         | undefined,
     currentAddress: string | undefined,
     currentPublicKey: string | undefined,
-    onAccountChange: (address: string, publicKey: string) => void,
+    onAccountChange: (account: {
+        address: string;
+        publicKey: string;
+        btcAddress?: string;
+        btcPublicKey?: string;
+    }) => void,
     connect: () => Promise<void>
 ) => {
     if (!addresses || !Array.isArray(addresses)) {
@@ -59,6 +64,19 @@ export const extractAndValidateStacksAddress = (
         stacksAccount.address !== currentAddress ||
         stacksAccount.publicKey !== currentPublicKey
     ) {
-        onAccountChange(stacksAccount.address, stacksAccount.publicKey);
+        // The BTC payment address changes together with the Stacks account, so
+        // resolve it here and hand it back alongside the Stacks values. Without
+        // this, a wallet-side account switch would leave a stale BTC address
+        // (same failure class as the stale publicKey fixed in #74).
+        const paymentAccount = addresses.find(
+            (acc) => acc.purpose === 'payment'
+        );
+
+        onAccountChange({
+            address: stacksAccount.address,
+            publicKey: stacksAccount.publicKey,
+            btcAddress: paymentAccount?.address,
+            btcPublicKey: paymentAccount?.publicKey,
+        });
     }
 };

@@ -21,7 +21,12 @@ export const useXverse = ({
     address: string | undefined;
     publicKey: string | undefined;
     provider: SupportedStacksWallet | undefined;
-    onAccountChange: (address: string, publicKey: string) => void;
+    onAccountChange: (account: {
+        address: string;
+        publicKey: string;
+        btcAddress?: string;
+        btcPublicKey?: string;
+    }) => void;
     connect: (
         providerId?: SupportedStacksWallet,
         options?: ConnectOptions
