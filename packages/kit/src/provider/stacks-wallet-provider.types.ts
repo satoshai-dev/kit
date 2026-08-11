@@ -85,18 +85,11 @@ export type WalletState =
           publicKey: string | undefined;
           /**
            * Bitcoin payment address (native segwit / `p2wpkh`). Present for
-           * wallets that expose it (Xverse, Leather); `undefined` for wallets
-           * that don't (OKX, WalletConnect).
-           *
-           * Surfaced ergonomically as `paymentAddress` by the `useBitcoinAddress`
-           * hook — prefer that hook in components.
+           * Xverse and Leather; `undefined` for OKX and WalletConnect. Surfaced
+           * as `paymentAddress` by `useBitcoinAddress` — prefer that hook.
            */
           btcAddress: string | undefined;
-          /**
-           * Public key for {@link btcAddress}, used to sign Bitcoin transactions
-           * (e.g. an sBTC withdrawal PSBT). Surfaced as `paymentPublicKey` by
-           * `useBitcoinAddress`.
-           */
+          /** Public key for {@link btcAddress} (surfaced as `paymentPublicKey`). */
           btcPublicKey: string | undefined;
           provider: SupportedStacksWallet;
       };

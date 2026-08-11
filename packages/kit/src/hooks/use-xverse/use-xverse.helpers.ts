@@ -66,14 +66,9 @@ export const extractAndValidateStacksAddress = (
         stacksAccount.address !== currentAddress ||
         stacksAccount.publicKey !== currentPublicKey
     ) {
-        // The BTC payment address changes together with the Stacks account, so
-        // resolve it here and hand it back alongside the Stacks values. Without
-        // this, a wallet-side account switch would leave a stale BTC address
-        // (same failure class as the stale publicKey fixed in #74).
-        //
-        // Reuse the shared extractor so this path applies the exact same rules
-        // as connect/restore (payment entry, public key required) — otherwise
-        // the same wallet payload could yield a BTC address here but not there.
+        // Keep the BTC payment address in sync with the switched account (same
+        // failure class as the stale publicKey fixed in #74). Shared extractor
+        // so this path applies the same rules as connect/restore.
         const btc = extractBitcoinPaymentAddress('xverse', addresses);
 
         onAccountChange({

@@ -458,11 +458,9 @@ export const StacksWalletProvider = ({
         [onAddressChange]
     );
 
-    // Xverse emits accountChange with the full address set. We must update the
-    // Stacks address + publicKey (otherwise hooks that build unsigned txs, e.g.
-    // useSponsoredContractCall, sign with a stale publicKey and the tx fails
-    // verifyOrigin()) and the BTC payment address (otherwise an sBTC withdrawal
-    // would target the previous account's Bitcoin address).
+    // Xverse accountChange carries the full address set. Update all of it: a
+    // stale publicKey breaks useSponsoredContractCall's verifyOrigin(), and a
+    // stale btcAddress would send an sBTC withdrawal to the previous account.
     const handleXverseAccountChange = useCallback(
         (account: {
             address: string;
