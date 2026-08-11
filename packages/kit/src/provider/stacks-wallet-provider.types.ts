@@ -67,18 +67,30 @@ export type WalletState =
           status: 'disconnected';
           address: undefined;
           publicKey: undefined;
+          btcAddress: undefined;
+          btcPublicKey: undefined;
           provider: undefined;
       }
     | {
           status: 'connecting';
           address: undefined;
           publicKey: undefined;
+          btcAddress: undefined;
+          btcPublicKey: undefined;
           provider: undefined;
       }
     | {
           status: 'connected';
           address: string;
           publicKey: string | undefined;
+          /**
+           * Bitcoin payment address (native segwit / `p2wpkh`). Present for
+           * Xverse and Leather; `undefined` for OKX and WalletConnect. Surfaced
+           * as `paymentAddress` by `useBitcoinAddress` — prefer that hook.
+           */
+          btcAddress: string | undefined;
+          /** Public key for {@link btcAddress} (surfaced as `paymentPublicKey`). */
+          btcPublicKey: string | undefined;
           provider: SupportedStacksWallet;
       };
 

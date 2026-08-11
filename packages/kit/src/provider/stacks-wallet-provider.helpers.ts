@@ -110,6 +110,44 @@ export const unregisterOkxProvider = () => {
 };
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
+/**
+ * Extract the Bitcoin **payment** address (send/receive; native segwit /
+ * `p2wpkh` for the supported wallets) — the correct destination for an sBTC
+ * withdrawal (bridge-out). The taproot/ordinals address (`p2tr`) is ignored on
+ * purpose: it holds inscriptions and must not receive plain BTC.
+ *
+ * Wallets label entries differently — Xverse omits `symbol` and uses `purpose`;
+ * Leather uses `symbol: 'BTC'` + `type`. Returns `undefined` when no payment
+ * entry with a public key is present (e.g. OKX, WalletConnect).
+ */
+export const extractBitcoinPaymentAddress = (
+    typedProvider: SupportedStacksWallet,
+    addresses: {
+        address?: string;
+        symbol?: string;
+        publicKey?: string;
+        purpose?: string;
+        type?: string;
+    }[]
+): { address: string; publicKey: string } | undefined => {
+    if (!addresses?.length) return undefined;
+
+    const entry =
+        typedProvider === 'xverse'
+            ? addresses.find((addr) => addr.purpose === 'payment')
+            : typedProvider === 'leather'
+              ? addresses.find(
+                    (addr) => addr.symbol === 'BTC' && addr.type === 'p2wpkh'
+                )
+              : undefined;
+
+    if (entry?.address && entry.publicKey) {
+        return { address: entry.address, publicKey: entry.publicKey };
+    }
+
+    return undefined;
+};
+
 export const extractStacksAddress = (
     typedProvider: SupportedStacksWallet,
     addresses: { address?: string; symbol?: string; publicKey?: string }[]

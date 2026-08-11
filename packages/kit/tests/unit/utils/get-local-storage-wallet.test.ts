@@ -40,6 +40,19 @@ describe('getLocalStorageWallet', () => {
         expect(getLocalStorageWallet()).toEqual(data);
     });
 
+    it('preserves persisted BTC payment address and public key', () => {
+        const data = {
+            address: 'SP123',
+            publicKey: 'stxPk',
+            btcAddress: 'bc1qpay',
+            btcPublicKey: 'btcPk',
+            provider: 'xverse',
+        };
+        mockGetItem.mockReturnValue(JSON.stringify(data));
+
+        expect(getLocalStorageWallet()).toEqual(data);
+    });
+
     it('returns parsed data for all supported providers', () => {
         const providers = ['xverse', 'leather', 'okx', 'asigna', 'fordefi', 'wallet-connect'] as const;
 

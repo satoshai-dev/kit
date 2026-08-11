@@ -79,8 +79,63 @@ describe('extractAndValidateStacksAddress', () => {
             connect
         );
 
-        expect(onAccountChange).toHaveBeenCalledWith('SP456', 'pkB');
+        expect(onAccountChange).toHaveBeenCalledWith({
+            address: 'SP456',
+            publicKey: 'pkB',
+            btcAddress: undefined,
+            btcPublicKey: undefined,
+        });
         expect(connect).not.toHaveBeenCalled();
+    });
+
+    it('includes the BTC payment address when the account switches', () => {
+        const onAccountChange = vi.fn();
+        const connect = vi.fn().mockResolvedValue(undefined);
+
+        extractAndValidateStacksAddress(
+            [
+                { address: 'bc1qpay', publicKey: 'pkPay', addressType: 'p2wpkh', purpose: 'payment' },
+                { address: 'bc1pord', publicKey: 'pkOrd', addressType: 'p2tr', purpose: 'ordinals' },
+                { address: 'SP456', publicKey: 'pkB', addressType: 'stacks', purpose: 'stacks' },
+            ],
+            'SP123',
+            'pkA',
+            onAccountChange,
+            connect
+        );
+
+        expect(onAccountChange).toHaveBeenCalledWith({
+            address: 'SP456',
+            publicKey: 'pkB',
+            btcAddress: 'bc1qpay',
+            btcPublicKey: 'pkPay',
+        });
+        expect(connect).not.toHaveBeenCalled();
+    });
+
+    it('omits the BTC address on account switch when the payment entry has no public key', () => {
+        const onAccountChange = vi.fn();
+        const connect = vi.fn().mockResolvedValue(undefined);
+
+        // Mirrors the connect-path rule: a payment entry without a public key
+        // yields no BTC address (can't sign a withdrawal without the pubkey).
+        extractAndValidateStacksAddress(
+            [
+                { address: 'bc1qpay', addressType: 'p2wpkh', purpose: 'payment' },
+                { address: 'SP456', publicKey: 'pkB', addressType: 'stacks', purpose: 'stacks' },
+            ],
+            'SP123',
+            'pkA',
+            onAccountChange,
+            connect
+        );
+
+        expect(onAccountChange).toHaveBeenCalledWith({
+            address: 'SP456',
+            publicKey: 'pkB',
+            btcAddress: undefined,
+            btcPublicKey: undefined,
+        });
     });
 
     it('calls onAccountChange when only publicKey differs', () => {
@@ -95,7 +150,12 @@ describe('extractAndValidateStacksAddress', () => {
             connect
         );
 
-        expect(onAccountChange).toHaveBeenCalledWith('SP123', 'pkNew');
+        expect(onAccountChange).toHaveBeenCalledWith({
+            address: 'SP123',
+            publicKey: 'pkNew',
+            btcAddress: undefined,
+            btcPublicKey: undefined,
+        });
         expect(connect).not.toHaveBeenCalled();
     });
 
@@ -111,7 +171,12 @@ describe('extractAndValidateStacksAddress', () => {
             connect
         );
 
-        expect(onAccountChange).toHaveBeenCalledWith('SP123', 'pkA');
+        expect(onAccountChange).toHaveBeenCalledWith({
+            address: 'SP123',
+            publicKey: 'pkA',
+            btcAddress: undefined,
+            btcPublicKey: undefined,
+        });
         expect(connect).not.toHaveBeenCalled();
     });
 
@@ -146,7 +211,12 @@ describe('extractAndValidateStacksAddress', () => {
             connect
         );
 
-        expect(onAccountChange).toHaveBeenCalledWith('SP789', 'pkS');
+        expect(onAccountChange).toHaveBeenCalledWith({
+            address: 'SP789',
+            publicKey: 'pkS',
+            btcAddress: 'bc1qxyz',
+            btcPublicKey: 'pkX',
+        });
     });
 
     it('finds stacks account by addressType field', () => {
@@ -161,6 +231,11 @@ describe('extractAndValidateStacksAddress', () => {
             connect
         );
 
-        expect(onAccountChange).toHaveBeenCalledWith('SP789', 'pkS');
+        expect(onAccountChange).toHaveBeenCalledWith({
+            address: 'SP789',
+            publicKey: 'pkS',
+            btcAddress: undefined,
+            btcPublicKey: undefined,
+        });
     });
 });

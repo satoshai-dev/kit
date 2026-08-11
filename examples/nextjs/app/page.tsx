@@ -10,6 +10,7 @@ import {
 } from '@stacks/transactions';
 import {
     useAddress,
+    useBitcoinAddress,
     useConnect,
     useDisconnect,
     useBnsName,
@@ -59,6 +60,7 @@ const myToken = createContractConfig({
 export default function Home() {
     const { connect, reset, isPending } = useConnect();
     const { address, publicKey, isConnected, provider } = useAddress();
+    const { paymentAddress, isAvailable: hasBtc } = useBitcoinAddress();
     const { disconnect } = useDisconnect();
     const { bnsName, isLoading: isBnsLoading } = useBnsName(address);
     const { wallets } = useWallets();
@@ -85,6 +87,14 @@ export default function Home() {
                 <p>
                     <strong>Public Key:</strong>{' '}
                     {publicKey ? <code>{publicKey}</code> : <em>not available</em>}
+                </p>
+                <p>
+                    <strong>BTC Payment Address:</strong>{' '}
+                    {hasBtc ? (
+                        <code>{paymentAddress}</code>
+                    ) : (
+                        <em>not available for this wallet</em>
+                    )}
                 </p>
                 {isBnsLoading ? (
                     <p>Loading BNS name...</p>

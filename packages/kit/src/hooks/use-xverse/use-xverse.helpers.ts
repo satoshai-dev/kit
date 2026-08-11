@@ -1,5 +1,7 @@
 import { getSelectedProvider } from '@stacks/connect';
 
+import { extractBitcoinPaymentAddress } from '../../provider/stacks-wallet-provider.helpers';
+
 export const getXverseProductInfo = async (): Promise<{
     version?: string;
     name?: string;
@@ -38,7 +40,12 @@ export const extractAndValidateStacksAddress = (
         | undefined,
     currentAddress: string | undefined,
     currentPublicKey: string | undefined,
-    onAccountChange: (address: string, publicKey: string) => void,
+    onAccountChange: (account: {
+        address: string;
+        publicKey: string;
+        btcAddress?: string;
+        btcPublicKey?: string;
+    }) => void,
     connect: () => Promise<void>
 ) => {
     if (!addresses || !Array.isArray(addresses)) {
@@ -59,6 +66,16 @@ export const extractAndValidateStacksAddress = (
         stacksAccount.address !== currentAddress ||
         stacksAccount.publicKey !== currentPublicKey
     ) {
-        onAccountChange(stacksAccount.address, stacksAccount.publicKey);
+        // Keep the BTC payment address in sync with the switched account (same
+        // failure class as the stale publicKey fixed in #74). Shared extractor
+        // so this path applies the same rules as connect/restore.
+        const btc = extractBitcoinPaymentAddress('xverse', addresses);
+
+        onAccountChange({
+            address: stacksAccount.address,
+            publicKey: stacksAccount.publicKey,
+            btcAddress: btc?.address,
+            btcPublicKey: btc?.publicKey,
+        });
     }
 };
