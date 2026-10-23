@@ -92,14 +92,14 @@ importers:
   packages/kit:
     dependencies:
       '@stacks/connect':
-        specifier: 8.2.6
-        version: 8.2.6(@types/react@19.2.14)(lit@3.3.0)(react@19.2.6)(typescript@5.9.3)(zod@3.22.4)
+        specifier: 8.2.7
+        version: 8.2.7(@types/react@19.2.14)(lit@3.3.0)(react@19.2.6)(typescript@5.9.3)(zod@3.22.4)
       bns-v2-sdk:
         specifier: ^2.2.0
         version: 2.2.0
       clarity-abitype:
         specifier: ^0.6.0
-        version: 0.6.0(@stacks/connect@8.2.6(@types/react@19.2.14)(lit@3.3.0)(react@19.2.6)(typescript@5.9.3)(zod@3.22.4))(@stacks/network@7.3.1)(@stacks/transactions@7.4.0)(typescript@5.9.3)
+        version: 0.6.0(@stacks/connect@8.2.7(@types/react@19.2.14)(lit@3.3.0)(react@19.2.6)(typescript@5.9.3)(zod@3.22.4))(@stacks/network@7.3.1)(@stacks/transactions@7.4.0)(typescript@5.9.3)
     devDependencies:
       '@stacks/transactions':
         specifier: ^7.4.0
@@ -1298,8 +1298,8 @@ packages:
   '@stacks/connect-ui@8.1.2':
     resolution: {integrity: sha512-C3T1QmEGJocnmsamQnKJvlvHFfjr/FDebLSokrAAwTr6x76JPS5xuACB7u3a7+vVMUdINV+pFvfn442oic2R5w==}
 
-  '@stacks/connect@8.2.6':
-    resolution: {integrity: sha512-MXkMVIDPPQLlL83UKb3rNdm7Gh/LQGdPhSsq+sL36KCM6qM1by8+igxX/R/5G+rgn6KdCG+iIRTh4TkAqntrTg==}
+  '@stacks/connect@8.2.7':
+    resolution: {integrity: sha512-O9S4CCeMHJS1xnE+bPEca6zexVDgpyz4ibyi9G0qysaoyFj6eJah+xFfiuKShie4lm9CTHN+6eqVWrjcanvRxQ==}
 
   '@stacks/network@6.17.0':
     resolution: {integrity: sha512-numHbfKjwco/rbkGPOEz8+FcJ2nBnS/tdJ8R422Q70h3SiA9eqk9RjSzB8p4JP8yW1SZvW+eihADHfMpBuZyfw==}
@@ -5080,7 +5080,7 @@ snapshots:
     dependencies:
       '@stencil/core': 4.43.1
 
-  '@stacks/connect@8.2.6(@types/react@19.2.14)(lit@3.3.0)(react@19.2.6)(typescript@5.9.3)(zod@3.22.4)':
+  '@stacks/connect@8.2.7(@types/react@19.2.14)(lit@3.3.0)(react@19.2.6)(typescript@5.9.3)(zod@3.22.4)':
     dependencies:
       '@reown/appkit': 1.7.17(@types/react@19.2.14)(lit@3.3.0)(react@19.2.6)(typescript@5.9.3)(zod@3.22.4)
       '@reown/appkit-universal-connector': 1.7.17(@types/react@19.2.14)(lit@3.3.0)(react@19.2.6)(typescript@5.9.3)(zod@3.22.4)
@@ -6081,9 +6081,9 @@ snapshots:
       to-buffer: 1.2.2
     optional: true
 
-  clarity-abitype@0.6.0(@stacks/connect@8.2.6(@types/react@19.2.14)(lit@3.3.0)(react@19.2.6)(typescript@5.9.3)(zod@3.22.4))(@stacks/network@7.3.1)(@stacks/transactions@7.4.0)(typescript@5.9.3):
+  clarity-abitype@0.6.0(@stacks/connect@8.2.7(@types/react@19.2.14)(lit@3.3.0)(react@19.2.6)(typescript@5.9.3)(zod@3.22.4))(@stacks/network@7.3.1)(@stacks/transactions@7.4.0)(typescript@5.9.3):
     optionalDependencies:
-      '@stacks/connect': 8.2.6(@types/react@19.2.14)(lit@3.3.0)(react@19.2.6)(typescript@5.9.3)(zod@3.22.4)
+      '@stacks/connect': 8.2.7(@types/react@19.2.14)(lit@3.3.0)(react@19.2.6)(typescript@5.9.3)(zod@3.22.4)
       '@stacks/network': 7.3.1
       '@stacks/transactions': 7.4.0
       typescript: 5.9.3
