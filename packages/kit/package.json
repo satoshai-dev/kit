@@ -33,7 +33,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@stacks/connect": "8.2.6",
+    "@stacks/connect": "8.2.7",
     "bns-v2-sdk": "^2.2.0",
     "clarity-abitype": "^0.6.0"
   },
