@@ -12,8 +12,12 @@ import type { PublicFunctionArgs } from '../../types/abi';
 
 /** Post-condition configuration for contract calls and STX transfers. */
 export interface PostConditionConfig {
-    /** Array of post-conditions that must be satisfied for the transaction to succeed. */
-    postConditions: PostCondition[];
+    /**
+     * Post-conditions that must be satisfied for the transaction to succeed.
+     * A string is a post-condition already serialized to hex; it goes to the
+     * wallet unchanged.
+     */
+    postConditions: (string | PostCondition)[];
     /** Whether to allow or deny any asset transfers not covered by `postConditions`. */
     mode: PostConditionMode;
 }
