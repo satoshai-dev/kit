@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "vite --port 5180 --strictPort",
     "build": "tsc -b && vite build",
-    "typecheck": "tsc --noEmit",
+    "check": "tsc --noEmit",
     "e2e": "playwright test"
   },
   "dependencies": {

@@ -22,6 +22,7 @@ Pages:
    pnpm exec playwright install chromium   # once
    pnpm dev                                 # http://localhost:5180
    pnpm e2e                                 # starts the dev server if it is not running
+   pnpm check                               # typecheck; build packages/kit first
    ```
 
 The suite pairs a headless WalletConnect wallet (`e2e/test-wallet.ts`, `@reown/walletkit`) with the page. The wallet signs Stacks requests with a random key and never broadcasts. It needs network access to the relay, so it is not part of CI.
