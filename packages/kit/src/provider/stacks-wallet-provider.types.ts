@@ -1,4 +1,5 @@
 import type { SupportedStacksWallet } from '../constants/wallets';
+import type { StacksAppKit } from './appkit-walletconnect';
 
 /** Stacks network identifier. */
 export type StacksChain = 'mainnet' | 'testnet';
@@ -41,8 +42,31 @@ export interface StacksWalletProviderProps {
      * the reference stable across renders.
      */
     walletConnect?: {
-        /** WalletConnect Cloud project ID from https://cloud.walletconnect.com. */
-        projectId: string;
+        /**
+         * WalletConnect Cloud project ID from https://cloud.walletconnect.com.
+         * Required unless `appKit` is set.
+         */
+        projectId?: string;
+        /**
+         * The app's own Reown AppKit instance (`createAppKit()`), if it has one.
+         *
+         * Use this when the app also uses AppKit (for example for Bitcoin or
+         * EVM wallets). Two AppKit instances on one page break each other's
+         * modal, so the kit then runs Stacks WalletConnect through this
+         * instance. Add the Stacks networks and session overrides from
+         * `getStacksAppKitConfig()` to the `createAppKit()` call. A wallet
+         * that approves both Stacks and the app's other chains shares one
+         * session, and a disconnect ends it for all chains.
+         */
+        appKit?: StacksAppKit;
+        /**
+         * With `appKit`: the AppKit namespace whose WalletConnect view shows
+         * the QR for a Stacks connect. Defaults to `'bip122'` when the AppKit
+         * has a Bitcoin network, else AppKit's active namespace. Avoid an EVM
+         * (wagmi) namespace: its adapter throws on a session without EVM
+         * accounts, which a Stacks-only wallet gives.
+         */
+        modalNamespace?: string;
         /** Override default dApp metadata shown in the wallet. */
         metadata?: Partial<WalletConnectMetadata>;
         /** Stacks chains to request. Defaults to `['mainnet']`. */

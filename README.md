@@ -88,12 +88,12 @@ Wrap your app to provide wallet context to all hooks.
 |------|------|---------|-------------|
 | `wallets` | `SupportedStacksWallet[]` | All 6 wallets | Wallets to enable. |
 | `connectModal` | `boolean` | `true` | Show `@stacks/connect` modal on `connect()` with no args. |
-| `walletConnect` | `{ projectId, metadata?, chains? }` | — | WalletConnect config. Required when `wallets` includes `'wallet-connect'`. |
+| `walletConnect` | `{ projectId?, appKit?, metadata?, chains? }` | — | WalletConnect config. Required when `wallets` includes `'wallet-connect'`. Give `projectId`, or `appKit` when the app has its own AppKit (see [Apps that also use Reown AppKit](#apps-that-also-use-reown-appkit)). |
 | `onConnect` | `(provider, address) => void` | — | Called after successful connection. |
 | `onAddressChange` | `(newAddress) => void` | — | Called when the connected account changes. |
 | `onDisconnect` | `() => void` | — | Called when the wallet disconnects. |
 
-> If `wallets` includes `'wallet-connect'`, you must provide `walletConnect.projectId` or the provider will throw at mount.
+> If `wallets` includes `'wallet-connect'`, you must provide `walletConnect.projectId` or `walletConnect.appKit`, or the provider will throw at mount.
 
 > **Important:** Define `wallets` and `walletConnect` outside of your component (or memoize them) so they remain referentially stable across renders. These values are treated as static configuration.
 
@@ -162,7 +162,7 @@ const { wallets } = useWallets();
 ))}
 ```
 
-A wallet is `available` when its browser extension is installed. For `wallet-connect`, it's `available` when a `walletConnect.projectId` is provided to the provider.
+A wallet is `available` when its browser extension is installed. For `wallet-connect`, it's `available` when a `walletConnect.projectId` or `walletConnect.appKit` is provided to the provider.
 
 ### `useDisconnect()`
 
@@ -457,6 +457,38 @@ When using WalletConnect, the kit automatically handles session lifecycle events
 - **Account changes** — Listens for `accountsChanged`, `stx_accountChange` (SIP-030), and `stx_accountsChanged` events. When the connected account changes, `onAddressChange` fires.
 
 No additional setup is needed — these features activate when `wallets` includes `'wallet-connect'` and a session is active.
+
+### Apps that also use Reown AppKit
+
+`@stacks/connect` runs WalletConnect through its own Reown AppKit. If your app also creates an AppKit (for example for Bitcoin or EVM wallets), the two instances share one modal and break each other: the WalletConnect QR never opens. Give the kit your AppKit instead of a `projectId`, and add the Stacks networks to it:
+
+```tsx
+import { createAppKit } from '@reown/appkit/react';
+import { bitcoin } from '@reown/appkit/networks';
+import { BitcoinAdapter } from '@reown/appkit-adapter-bitcoin';
+import { StacksWalletProvider, getStacksAppKitConfig } from '@satoshai/kit';
+
+const stacks = getStacksAppKitConfig(['mainnet']);
+
+const appKit = createAppKit({
+  adapters: [new BitcoinAdapter()],
+  networks: [bitcoin, ...stacks.networks],
+  universalProviderConfigOverride: stacks.universalProviderConfigOverride,
+  projectId: 'YOUR_PROJECT_ID',
+  metadata: { /* ... */ },
+});
+
+const walletConnect = { appKit };
+
+<StacksWalletProvider walletConnect={walletConnect}>{/* ... */}</StacksWalletProvider>;
+```
+
+Then only your AppKit runs, and Stacks WalletConnect opens your AppKit's QR view. Notes:
+
+- One WalletConnect session carries Stacks and your other chains. A wallet that approves both shows as connected on both sides, and a disconnect from either side ends the session for both.
+- If a WalletConnect session without Stacks is already active (an older session, or a Bitcoin-only wallet), `connect('wallet-connect')` ends it and opens a new pairing. If the wallet then approves no Stacks account, the connect fails with a clear error and keeps that new session for your other chains.
+- When your AppKit has a Bitcoin network, the kit makes Bitcoin the active AppKit namespace before it opens the WalletConnect view, because AppKit hands the new session to the active namespace's adapter. The EVM (wagmi) adapter throws on a session without EVM accounts, which Stacks wallets give. Set `walletConnect.modalNamespace` to choose another namespace. Pass an explicit `namespace` to your own `appKit.open()` calls, so that they do not depend on the active namespace.
+- Requires AppKit 1.8 or later. `examples/vite-appkit` has a working setup and an end-to-end test against the real WalletConnect relay.
 
 ## Supported Wallets
 

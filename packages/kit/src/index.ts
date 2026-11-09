@@ -14,6 +14,12 @@ export {
 
 // Provider
 export { StacksWalletProvider } from './provider/stacks-wallet-provider';
+export {
+    getStacksAppKitConfig,
+    type StacksAppKit,
+    type StacksAppKitConfig,
+    type StacksAppKitNetwork,
+} from './provider/appkit-walletconnect';
 
 // Hooks
 export { useAddress } from './hooks/use-address';

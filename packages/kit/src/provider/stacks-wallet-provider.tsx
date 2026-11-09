@@ -48,6 +48,7 @@ import type {
     StacksWalletProviderProps,
 } from './stacks-wallet-provider.types';
 import { useWalletConnect } from '../hooks/use-wallet-connect/use-wallet-connect';
+import { installAppKitStacksProvider } from './appkit-walletconnect';
 import { useXverse } from '../hooks/use-xverse/use-xverse';
 import { getLocalStorageWallet } from '../utils/get-local-storage-wallet';
 
@@ -128,12 +129,26 @@ export const StacksWalletProvider = ({
     // invalidate memos on every render. (Fixes #5)
     const walletsKey = wallets?.join(',');
 
+    const hasWalletConnect = !!(walletConnect?.projectId || walletConnect?.appKit);
+
     // Validate in render body so React error boundaries can catch it (#21)
-    if (wallets?.includes('wallet-connect') && !walletConnect?.projectId) {
+    if (wallets?.includes('wallet-connect') && !hasWalletConnect) {
         throw new Error(
-            'StacksWalletProvider: "wallet-connect" is listed in wallets but no walletConnect.projectId was provided.'
+            'StacksWalletProvider: "wallet-connect" is listed in wallets but no walletConnect.projectId or walletConnect.appKit was provided.'
         );
     }
+
+    // With a shared AppKit, install its Stacks provider before any
+    // @stacks/connect call, so @stacks/connect never starts its own AppKit.
+    useEffect(() => {
+        if (walletConnect?.appKit) {
+            installAppKitStacksProvider(
+                walletConnect.appKit,
+                walletConnect.chains,
+                walletConnect.modalNamespace
+            );
+        }
+    }, [walletConnect?.appKit]);
 
     // Register the OKX WBIP adapter so it appears in the @stacks/connect modal.
     // Only when connectModal is enabled and OKX is in the configured wallets
@@ -165,6 +180,23 @@ export const StacksWalletProvider = ({
 
                 if (
                     persisted.provider === 'wallet-connect' &&
+                    walletConnect?.appKit
+                ) {
+                    const wcProvider = installAppKitStacksProvider(
+                        walletConnect.appKit,
+                        walletConnect.chains,
+                        walletConnect.modalNamespace
+                    );
+                    await wcProvider?.init();
+                    // AppKit restores the session itself. If it has no
+                    // Stacks session, the saved wallet is stale.
+                    if (!wcProvider?.hasStacksSession) {
+                        localStorage.removeItem(LOCAL_STORAGE_STACKS);
+                        clearSelectedProviderId();
+                        return;
+                    }
+                } else if (
+                    persisted.provider === 'wallet-connect' &&
                     walletConnect?.projectId
                 ) {
                     const initPromise = WalletConnect.initializeProvider(
@@ -195,7 +227,7 @@ export const StacksWalletProvider = ({
         };
 
         void loadPersistedWallet();
-    }, [walletConnect?.projectId]);
+    }, [walletConnect?.projectId, walletConnect?.appKit]);
 
     const connect = useCallback(
         async (
@@ -226,10 +258,16 @@ export const StacksWalletProvider = ({
                     }
 
                     const wc = walletConnectRef.current;
-                    if (wc?.projectId) {
+                    if (wc?.appKit) {
+                        installAppKitStacksProvider(wc.appKit, wc.chains, wc.modalNamespace);
+                    }
+                    if (wc?.projectId || wc?.appKit) {
+                        // With appKit, @stacks/connect only uses this to list
+                        // WalletConnect: it finds the installed provider and
+                        // skips its own setup.
                         requestOptions.walletConnect =
                             buildWalletConnectConfig(
-                                wc.projectId,
+                                wc.projectId ?? '',
                                 wc.metadata,
                                 wc.chains
                             );
@@ -310,10 +348,11 @@ export const StacksWalletProvider = ({
 
             if (
                 typedProvider === 'wallet-connect' &&
-                !wc?.projectId
+                !wc?.projectId &&
+                !wc?.appKit
             ) {
                 const error = new Error(
-                    'WalletConnect requires a project ID. Please provide walletConnect.projectId to the StacksWalletProvider.'
+                    'WalletConnect requires a project ID or an AppKit instance. Please provide walletConnect.projectId or walletConnect.appKit to the StacksWalletProvider.'
                 );
                 console.error('🚨', error.message);
                 options?.onError?.(error);
@@ -343,8 +382,14 @@ export const StacksWalletProvider = ({
                     STACKS_TO_STACKS_CONNECT_PROVIDERS[typedProvider]
                 );
 
+                const useAppKit =
+                    typedProvider === 'wallet-connect' && !!wc?.appKit;
+                if (useAppKit && wc?.appKit) {
+                    installAppKitStacksProvider(wc.appKit, wc.chains, wc.modalNamespace);
+                }
+
                 const wcConfig =
-                    typedProvider === 'wallet-connect' && wc
+                    typedProvider === 'wallet-connect' && wc?.projectId && !useAppKit
                         ? buildWalletConnectConfig(
                               wc.projectId,
                               wc.metadata,
@@ -514,7 +559,7 @@ export const StacksWalletProvider = ({
         webUrl: PROVIDER_META_BY_KIT_ID[w]?.webUrl ?? '',
         available:
             w === 'wallet-connect'
-                ? !!walletConnect?.projectId
+                ? hasWalletConnect
                 : installed.includes(w),
     }));
 
