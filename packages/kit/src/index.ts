@@ -58,6 +58,7 @@ export {
     type TypedSponsoredContractCallVariables,
     type UntypedSponsoredContractCallVariables,
 } from './hooks/use-sponsored-contract-call/use-sponsored-contract-call';
+export { useSignContractCall } from './hooks/use-sign-contract-call/use-sign-contract-call';
 export { useBnsName } from './hooks/use-bns-name';
 export { useWallets } from './hooks/use-wallets';
 

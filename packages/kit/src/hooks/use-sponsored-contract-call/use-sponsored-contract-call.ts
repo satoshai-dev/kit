@@ -1,31 +1,8 @@
 'use client';
 
-import { request } from '@stacks/connect';
-import {
-    makeUnsignedContractCall,
-    serializeTransaction,
-} from '@stacks/transactions';
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 
-import {
-    BaseError,
-    WalletNotConnectedError,
-    UnsupportedMethodError,
-    WalletRequestError,
-} from '../../errors';
-import type { MutationStatus } from '../../provider/stacks-wallet-provider.types';
-import { useAddress } from '../use-address';
-import { getNetworkFromAddress } from '../../utils/get-network-from-address';
-
-import {
-    resolveArgs,
-    type ContractCallVariablesInternal,
-} from '../use-write-contract/contract-call.shared';
-import type {
-    SponsoredContractCallOptions,
-    SponsoredContractCallAsyncFn,
-    SponsoredContractCallFn,
-} from './use-sponsored-contract-call.types';
+import { useContractCallSigner } from '../use-sign-contract-call/use-sign-contract-call';
 
 /**
  * Sign a sponsored contract call without broadcasting.
@@ -68,105 +45,13 @@ import type {
  * @throws {WalletRequestError} If the wallet rejects or fails the request.
  */
 export const useSponsoredContractCall = () => {
-    const { isConnected, address, publicKey, provider } = useAddress();
-
-    const [data, setData] = useState<string | undefined>(undefined);
-    const [error, setError] = useState<BaseError | null>(null);
-    const [status, setStatus] = useState<MutationStatus>('idle');
-
-    const sponsoredContractCallAsync = useCallback(
-        async (variables: ContractCallVariablesInternal): Promise<string> => {
-            if (!isConnected || !address) {
-                throw new WalletNotConnectedError();
-            }
-
-            if (provider === 'okx') {
-                throw new UnsupportedMethodError({
-                    method: 'stx_callContract (sponsored)',
-                    wallet: 'OKX',
-                });
-            }
-
-            if (!publicKey) {
-                throw new BaseError(
-                    'Public key not available — cannot build sponsored transaction'
-                );
-            }
-
-            setStatus('pending');
-            setError(null);
-            setData(undefined);
-
-            const resolvedArgs = resolveArgs(variables);
-
-            try {
-                const unsignedTx = await makeUnsignedContractCall({
-                    contractAddress: variables.address,
-                    contractName: variables.contract,
-                    functionName: variables.functionName,
-                    functionArgs: resolvedArgs,
-                    publicKey,
-                    sponsored: true,
-                    fee: 0,
-                    postConditions: variables.pc.postConditions,
-                    postConditionMode: variables.pc.mode,
-                    network: getNetworkFromAddress(address),
-                });
-
-                const result = await request('stx_signTransaction', {
-                    transaction: serializeTransaction(unsignedTx),
-                    broadcast: false,
-                });
-
-                const signedTx = result.transaction;
-                if (!signedTx) {
-                    throw new Error('No signed transaction returned');
-                }
-
-                setData(signedTx);
-                setStatus('success');
-                return signedTx;
-            } catch (err) {
-                const error = err instanceof BaseError
-                    ? err
-                    : new WalletRequestError({
-                          method: 'stx_signTransaction',
-                          wallet: provider ?? 'unknown',
-                          cause: err instanceof Error ? err : new Error(String(err)),
-                      });
-                setError(error);
-                setStatus('error');
-                throw error;
-            }
-        },
-        [isConnected, address, publicKey, provider]
-    ) as unknown as SponsoredContractCallAsyncFn;
-
-    const sponsoredContractCall = useCallback(
-        (variables: ContractCallVariablesInternal, options?: SponsoredContractCallOptions) => {
-            (sponsoredContractCallAsync as unknown as (v: ContractCallVariablesInternal) => Promise<string>)(variables)
-                .then((data) => {
-                    options?.onSuccess?.(data);
-                    options?.onSettled?.(data, null);
-                })
-                .catch((error) => {
-                    options?.onError?.(error);
-                    options?.onSettled?.(undefined, error);
-                });
-        },
-        [sponsoredContractCallAsync]
-    ) as unknown as SponsoredContractCallFn;
-
-    const reset = useCallback(() => {
-        setData(undefined);
-        setError(null);
-        setStatus('idle');
-    }, []);
+    const { sign, signAsync, reset, data, error, status } =
+        useContractCallSigner(true);
 
     return useMemo(
         () => ({
-            sponsoredContractCall,
-            sponsoredContractCallAsync,
+            sponsoredContractCall: sign,
+            sponsoredContractCallAsync: signAsync,
             reset,
             data,
             error,
@@ -176,7 +61,7 @@ export const useSponsoredContractCall = () => {
             isSuccess: status === 'success',
             status,
         }),
-        [sponsoredContractCall, sponsoredContractCallAsync, reset, data, error, status]
+        [sign, signAsync, reset, data, error, status]
     );
 };
 
