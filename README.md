@@ -16,6 +16,7 @@ Typesafe Stacks wallet & contract interaction library for React. Wagmi-inspired 
 - **`useSignStructuredMessage`** — Sign SIP-018 structured data
 - **`useSignTransaction`** — Sign serialized transactions (sponsored tx flows)
 - **`useWriteContract`** — Call smart contracts with post-conditions (typed or untyped)
+- **`useSignContractCall`** — Build a contract call in the app and have the wallet only sign it (any post-condition mode, incl. originator)
 - **`useTransferSTX`** — Native STX transfers
 - **`useBnsName`** — Resolve BNS v2 names
 - **Typed errors** — `BaseError`, `WalletNotConnectedError`, `WalletNotFoundError`, `UnsupportedMethodError`, `WalletRequestError`
@@ -355,6 +356,24 @@ signTransaction({ transaction: '0x0100...', broadcast: false }, {
 const { transaction, txid } = await signTransactionAsync({
   transaction: '0x0100...',
   broadcast: false,
+});
+```
+
+### `useSignContractCall()`
+
+Build a standard contract call in the app and have the wallet only sign it (`stx_signTransaction`, no broadcast). The post-condition mode reaches the wallet unchanged, so it works for originator mode (SIP-040, `@stacks/transactions` >= 7.4.0). Fee and nonce are fetched by `@stacks/transactions`. You broadcast or relay the returned hex.
+
+> **Note:** OKX wallet cannot sign a prebuilt transaction and will throw an `UnsupportedMethodError`.
+
+```ts
+const { signContractCallAsync } = useSignContractCall();
+
+const signedTx = await signContractCallAsync({
+  address: 'SP...',
+  contract: 'router',
+  functionName: 'swap',
+  args: [uintCV(100)],
+  pc: { postConditions, mode: PostConditionMode.Originator },
 });
 ```
 
